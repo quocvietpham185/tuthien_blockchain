@@ -1,0 +1,146 @@
+.campaign-card {
+  background: rgba(15, 20, 45, 0.8);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 20px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(20px);
+  display: flex;
+  flex-direction: column;
+}
+
+.campaign-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4), 0 0 30px rgba(124, 58, 237, 0.2);
+}
+
+/* ---- Image ---- */
+.campaign-image {
+  position: relative;
+  height: 200px;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(59, 130, 246, 0.2));
+}
+
+.campaign-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.campaign-card:hover .campaign-image img {
+  transform: scale(1.05);
+}
+
+.campaign-image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(59, 130, 246, 0.15));
+}
+
+.campaign-image-placeholder span {
+  font-size: 72px;
+  opacity: 0.7;
+  animation: float 4s ease infinite;
+}
+
+.campaign-overlay {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* ---- Content ---- */
+.campaign-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+}
+
+.campaign-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #f1f5f9;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.campaign-desc {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ---- Progress ---- */
+.campaign-progress { display: flex; flex-direction: column; gap: 6px; }
+
+.progress-info {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.raised-amount {
+  font-size: 18px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #a78bfa, #60a5fa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.goal-amount { font-size: 12px; color: #64748b; }
+.progress-pct { font-size: 12px; color: #94a3b8; font-weight: 700; text-align: right; }
+
+/* ---- Stats ---- */
+.campaign-stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stat-item { display: flex; align-items: center; gap: 4px; }
+.stat-ico { font-size: 14px; }
+.stat-val { font-size: 13px; font-weight: 700; color: #f1f5f9; }
+.stat-lbl { font-size: 11px; color: #64748b; }
+.text-red { color: #f87171; }
+
+/* ---- Owner ---- */
+.campaign-owner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.owner-label { color: #64748b; }
+
+/* ---- Actions ---- */
+.campaign-actions { margin-top: auto; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}

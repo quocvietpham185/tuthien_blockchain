@@ -1,0 +1,239 @@
+import { useCallback } from "react";
+import { ethers } from "ethers";
+import toast from "react-hot-toast";
+import ContractABI from "../contracts/CharityDonation.json";
+
+export function useContract(signer, provider) {
+  const getContract = useCallback(
+    (withSigner = false) => {
+      const config = ContractABI;
+      if (!config || !config.address) {
+        throw new Error("Contract not deployed. Run: npm run deploy:local in blockchain/");
+      }
+      const signerOrProvider = withSigner ? signer : provider;
+      if (!signerOrProvider) {
+        throw new Error("Wallet not connected");
+      }
+      return new ethers.Contract(config.address, config.abi, signerOrProvider);
+    },
+    [signer, provider]
+  );
+
+  /**
+   * Create a new campaign
+   */
+  const createCampaign = useCallback(
+    async ({ title, description, category, ipfsHash, goal, durationDays }) => {
+      const contract = getContract(true);
+      const goalWei = ethers.parseEther(goal.toString());
+
+      const toastId = toast.loading("Đang tạo chiến dịch trên blockchain...");
+      try {
+        const tx = await contract.createCampaign(
+          title,
+          description,
+          category,
+          ipfsHash,
+          goalWei,
+          durationDays
+        );
+        toast.loading("Đang chờ xác nhận transaction...", { id: toastId });
+        const receipt = await tx.wait();
+        toast.success("🎉 Chiến dịch đã được tạo!", { id: toastId });
+        return { success: true, txHash: receipt.hash, receipt };
+      } catch (error) {
+        const msg = error.reason || error.message || "Transaction failed";
+        toast.error("❌ Lỗi: " + msg, { id: toastId });
+        return { success: false, error: msg };
+      }
+    },
+    [getContract]
+  );
+
+  /**
+   * Donate to a campaign
+   */
+  const donate = useCallback(
+    async (campaignId, amountEth, message = "") => {
+      const contract = getContract(true);
+      const amountWei = ethers.parseEther(amountEth.toString());
+
+      const toastId = toast.loading(`Đang quyên góp ${amountEth} ETH...`);
+      try {
+        const tx = await contract.donate(campaignId, message, { value: amountWei });
+        toast.loading("Đang chờ xác nhận transaction...", { id: toastId });
+        const receipt = await tx.wait();
+        toast.success(`💰 Đã quyên góp ${amountEth} ETH thành công!`, { id: toastId });
+        return { success: true, txHash: receipt.hash, receipt };
+      } catch (error) {
+        const msg = error.reason || error.message || "Transaction failed";
+        toast.error("❌ Lỗi quyên góp: " + msg, { id: toastId });
+        return { success: false, error: msg };
+      }
+    },
+    [getContract]
+  );
+
+  /**
+   * Withdraw funds from a campaign
+   */
+  const withdrawFunds = useCallback(
+    async (campaignId) => {
+      const contract = getContract(true);
+      const toastId = toast.loading("Đang rút tiền...");
+      try {
+        const tx = await contract.withdrawFunds(campaignId);
+        toast.loading("Đang chờ xác nhận...", { id: toastId });
+        const receipt = await tx.wait();
+        toast.success("🏦 Đã rút tiền thành công!", { id: toastId });
+        return { success: true, txHash: receipt.hash, receipt };
+      } catch (error) {
+        const msg = error.reason || error.message || "Transaction failed";
+        toast.error("❌ Lỗi rút tiền: " + msg, { id: toastId });
+        return { success: false, error: msg };
+      }
+    },
+    [getContract]
+  );
+
+  /**
+   * Get all campaigns
+   */
+  const getCampaigns = useCallback(async () => {
+    const contract = getContract(false);
+    const campaigns = await contract.getCampaigns();
+    return campaigns.map(formatCampaign);
+  }, [getContract]);
+
+  /**
+   * Get a single campaign
+   */
+  const getCampaign = useCallback(
+    async (campaignId) => {
+      const contract = getContract(false);
+      const campaign = await contract.getCampaign(campaignId);
+      return formatCampaign(campaign);
+    },
+    [getContract]
+  );
+
+  /**
+   * Get campaign donations
+   */
+  const getCampaignDonations = useCallback(
+    async (campaignId) => {
+      const contract = getContract(false);
+      const donations = await contract.getCampaignDonations(campaignId);
+      return donations.map(formatDonation);
+    },
+    [getContract]
+  );
+
+  /**
+   * Get user donations
+   */
+  const getUserDonations = useCallback(
+    async (userAddress) => {
+      const contract = getContract(false);
+      const donations = await contract.getUserDonations(userAddress);
+      return donations.map(formatDonation);
+    },
+    [getContract]
+  );
+
+  /**
+   * Get all transactions (global history)
+   */
+  const getAllTransactions = useCallback(async () => {
+    const contract = getContract(false);
+    const txs = await contract.getAllTransactions();
+    return txs.map(formatTransaction);
+  }, [getContract]);
+
+  /**
+   * Get platform stats
+   */
+  const getPlatformStats = useCallback(async () => {
+    const contract = getContract(false);
+    const [totalCampaigns, totalDonations, activeCampaigns] = await contract.getPlatformStats();
+    return {
+      totalCampaigns: totalCampaigns.toString(),
+      totalDonations: ethers.formatEther(totalDonations),
+      activeCampaigns: activeCampaigns.toString(),
+    };
+  }, [getContract]);
+
+  /**
+   * Get contract address
+   */
+  const getContractAddress = () => {
+    try {
+      return ContractABI?.address || null;
+    } catch {
+      return null;
+    }
+  };
+
+  return {
+    createCampaign,
+    donate,
+    withdrawFunds,
+    getCampaigns,
+    getCampaign,
+    getCampaignDonations,
+    getUserDonations,
+    getAllTransactions,
+    getPlatformStats,
+    getContractAddress,
+  };
+}
+
+// ---- Formatters ----
+
+function formatCampaign(c) {
+  const goal = BigInt(c.goal);
+  const raised = BigInt(c.raised);
+  const progress = goal > 0n ? Math.min(100, Math.round((Number(raised) * 100) / Number(goal))) : 0;
+
+  return {
+    id: c.id.toString(),
+    owner: c.owner,
+    title: c.title,
+    description: c.description,
+    category: c.category,
+    ipfsHash: c.ipfsHash,
+    goal: ethers.formatEther(c.goal),
+    goalWei: c.goal.toString(),
+    raised: ethers.formatEther(c.raised),
+    raisedWei: c.raised.toString(),
+    deadline: Number(c.deadline),
+    donorCount: c.donorCount.toString(),
+    active: c.active,
+    withdrawn: c.withdrawn,
+    createdAt: Number(c.createdAt),
+    progress,
+  };
+}
+
+function formatDonation(d) {
+  return {
+    donor: d.donor,
+    campaignId: d.campaignId.toString(),
+    amount: ethers.formatEther(d.amount),
+    amountWei: d.amount.toString(),
+    timestamp: Number(d.timestamp),
+    message: d.message,
+  };
+}
+
+function formatTransaction(t) {
+  return {
+    txType: t.txType,
+    campaignId: t.campaignId.toString(),
+    actor: t.actor,
+    amount: ethers.formatEther(t.amount),
+    amountWei: t.amount.toString(),
+    timestamp: Number(t.timestamp),
+    campaignTitle: t.campaignTitle,
+  };
+}
