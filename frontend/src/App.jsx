@@ -6,6 +6,7 @@ import CampaignDetail from "./pages/CampaignDetail";
 import CreateCampaign from "./pages/CreateCampaign";
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
+import Admin from "./pages/Admin";
 import { useWallet } from "./hooks/useWallet";
 import { useContract } from "./hooks/useContract";
 import "./styles/pages.css";
@@ -41,11 +42,27 @@ export default function App() {
         />
         <Route
           path="/dashboard"
-          element={<Dashboard contractHooks={contractHooks} account={wallet.account} />}
+          element={
+            <Dashboard
+              contractHooks={contractHooks}
+              account={wallet.account}
+              authToken={wallet.authToken}
+            />
+          }
         />
         <Route
           path="/transactions"
           element={<Transactions contractHooks={contractHooks} account={wallet.account} />}
+        />
+        <Route
+          path="/admin"
+          element={
+            <Admin
+              contractHooks={contractHooks}
+              account={wallet.account}
+              authToken={wallet.authToken}
+            />
+          }
         />
       </Routes>
     </>

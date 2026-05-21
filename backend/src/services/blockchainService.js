@@ -1,6 +1,7 @@
 const { ethers } = require("ethers");
 const fs = require("fs");
 const path = require("path");
+const notificationService = require("./notificationService");
 
 let provider = null;
 let contract = null;
@@ -55,18 +56,44 @@ function setupEventListeners() {
 
   contract.on("CampaignCreated", (id, owner, title, category, goal, deadline, ipfsHash, timestamp, event) => {
     console.log(`📢 [EVENT] CampaignCreated: #${id} "${title}" by ${owner.slice(0, 8)}...`);
+    notificationService.addNotification("CAMPAIGN_CREATED", {
+      campaignId: id.toString(),
+      owner,
+      actor: owner,
+      title,
+      category,
+      goal: ethers.formatEther(goal),
+      deadline: deadline.toString(),
+      txHash: event?.log?.transactionHash || event?.transactionHash,
+    });
   });
 
   contract.on("DonationReceived", (campaignId, donor, amount, message, timestamp, totalRaised, event) => {
     console.log(
       `💰 [EVENT] DonationReceived: ${ethers.formatEther(amount)} ETH to Campaign #${campaignId} from ${donor.slice(0, 8)}...`
     );
+    notificationService.addNotification("DONATION_RECEIVED", {
+      campaignId: campaignId.toString(),
+      donor,
+      actor: donor,
+      amount: ethers.formatEther(amount),
+      message,
+      totalRaised: ethers.formatEther(totalRaised),
+      txHash: event?.log?.transactionHash || event?.transactionHash,
+    });
   });
 
   contract.on("FundsWithdrawn", (campaignId, owner, amount, timestamp, event) => {
     console.log(
       `🏦 [EVENT] FundsWithdrawn: ${ethers.formatEther(amount)} ETH from Campaign #${campaignId}`
     );
+    notificationService.addNotification("FUNDS_WITHDRAWN", {
+      campaignId: campaignId.toString(),
+      owner,
+      actor: owner,
+      amount: ethers.formatEther(amount),
+      txHash: event?.log?.transactionHash || event?.transactionHash,
+    });
   });
 }
 
@@ -139,6 +166,11 @@ async function getAllTransactions() {
   return txs.map(formatTransaction);
 }
 
+async function getPlatformOwner() {
+  if (!contract) throw new Error("Contract not initialized");
+  return contract.platformOwner();
+}
+
 /**
  * Get platform statistics
  */
@@ -159,6 +191,57 @@ async function getPlatformStats() {
     blockNumber,
     chainId: network.chainId.toString(),
     contractAddress: contractConfig?.address,
+  };
+}
+
+async function getAdvancedStats() {
+  if (!contract) throw new Error("Contract not initialized");
+
+  const [campaigns, transactions, basicStats] = await Promise.all([
+    getCampaigns(),
+    getAllTransactions(),
+    getPlatformStats(),
+  ]);
+
+  const now = Math.floor(Date.now() / 1000);
+  const totalRaised = campaigns.reduce((sum, c) => sum + Number(c.raised), 0);
+  const totalGoal = campaigns.reduce((sum, c) => sum + Number(c.goal), 0);
+  const completedCampaigns = campaigns.filter(
+    (c) => c.withdrawn || Number(c.raised) >= Number(c.goal)
+  );
+  const expiredCampaigns = campaigns.filter((c) => Number(c.deadline) < now && !c.withdrawn);
+  const uniqueDonors = new Set(
+    transactions.filter((t) => t.txType === "DONATE").map((t) => t.actor.toLowerCase())
+  );
+
+  const byCategory = campaigns.reduce((acc, campaign) => {
+    const key = campaign.category || "Uncategorized";
+    if (!acc[key]) acc[key] = { campaignCount: 0, raised: 0, goal: 0, activeCount: 0 };
+    acc[key].campaignCount += 1;
+    acc[key].raised += Number(campaign.raised);
+    acc[key].goal += Number(campaign.goal);
+    if (campaign.active && Number(campaign.deadline) >= now) acc[key].activeCount += 1;
+    return acc;
+  }, {});
+
+  const topCampaigns = [...campaigns]
+    .sort((a, b) => Number(b.raised) - Number(a.raised))
+    .slice(0, 5);
+
+  return {
+    ...basicStats,
+    totalRaised: totalRaised.toFixed(6),
+    totalGoal: totalGoal.toFixed(6),
+    completionRate: campaigns.length
+      ? Math.round((completedCampaigns.length * 100) / campaigns.length)
+      : 0,
+    fundingRate: totalGoal > 0 ? Math.round((totalRaised * 100) / totalGoal) : 0,
+    uniqueDonors: uniqueDonors.size.toString(),
+    completedCampaigns: completedCampaigns.length.toString(),
+    expiredCampaigns: expiredCampaigns.length.toString(),
+    transactionCount: transactions.length.toString(),
+    byCategory,
+    topCampaigns,
   };
 }
 
@@ -270,6 +353,8 @@ module.exports = {
   getCampaignDonations,
   getUserDonations,
   getAllTransactions,
+  getPlatformOwner,
   getPlatformStats,
+  getAdvancedStats,
   getRecentEvents,
 };

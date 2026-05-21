@@ -9,7 +9,11 @@ const campaignsRouter = require("./routes/campaigns");
 const donationsRouter = require("./routes/donations");
 const transactionsRouter = require("./routes/transactions");
 const ipfsRouter = require("./routes/ipfs");
+const authRouter = require("./routes/auth");
+const adminRouter = require("./routes/admin");
+const notificationsRouter = require("./routes/notifications");
 const blockchainService = require("./services/blockchainService");
+const rateLimit = require("./middleware/rateLimit");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -25,6 +29,7 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
+app.use(rateLimit({ windowMs: 60_000, max: 180 }));
 
 // Serve uploaded files (Mock IPFS)
 const uploadsDir = path.join(__dirname, "../uploads");
@@ -38,23 +43,29 @@ app.use("/api/campaigns", campaignsRouter);
 app.use("/api/donations", donationsRouter);
 app.use("/api/transactions", transactionsRouter);
 app.use("/api/ipfs", ipfsRouter);
+app.use("/api/auth", authRouter);
+app.use("/api/admin", adminRouter);
+app.use("/api/notifications", notificationsRouter);
 
 // Health check
 app.get("/api/health", async (req, res) => {
   const status = await blockchainService.getStatus();
-  res.json({
-    status: "ok",
-    timestamp: new Date().toISOString(),
-    blockchain: status,
-    ipfs: "mock (local storage)",
-    version: "1.0.0",
-  });
+    res.json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      blockchain: status,
+      ipfs: process.env.PINATA_JWT ? "pinata" : "mock (local storage)",
+      version: "1.0.0",
+    });
 });
 
 // Platform stats endpoint
 app.get("/api/stats", async (req, res) => {
   try {
-    const stats = await blockchainService.getPlatformStats();
+    const stats =
+      req.query.advanced === "true"
+        ? await blockchainService.getAdvancedStats()
+        : await blockchainService.getPlatformStats();
     res.json({ success: true, data: stats });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

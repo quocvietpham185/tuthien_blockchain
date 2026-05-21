@@ -9,7 +9,7 @@ import {
   truncate,
   formatAddress,
 } from "../../utils/format";
-import { getIPFSUrl } from "../../utils/ipfs";
+import { getCampaignImageUrl, getDefaultCampaignImage } from "../../utils/ipfs";
 import "./CampaignCard.css";
 
 export default function CampaignCard({ campaign, onDonate }) {
@@ -17,7 +17,7 @@ export default function CampaignCard({ campaign, onDonate }) {
   const status = getCampaignStatus(campaign);
   const timeLeft = getTimeRemaining(campaign.deadline);
   const categoryClass = getCategoryClass(campaign.category);
-  const imageUrl = getIPFSUrl(campaign.ipfsHash);
+  const imageUrl = getCampaignImageUrl(campaign);
 
   // Category emoji mapping
   const categoryEmoji = {
@@ -40,7 +40,14 @@ export default function CampaignCard({ campaign, onDonate }) {
       {/* Image */}
       <div className="campaign-image">
         {imageUrl ? (
-          <img src={imageUrl} alt={campaign.title} loading="lazy" />
+          <img
+            src={imageUrl}
+            alt={campaign.title}
+            loading="lazy"
+            onError={(event) => {
+              event.currentTarget.src = getDefaultCampaignImage(campaign.category);
+            }}
+          />
         ) : (
           <div className="campaign-image-placeholder">
             <span>{categoryEmoji[campaign.category] || "🎯"}</span>

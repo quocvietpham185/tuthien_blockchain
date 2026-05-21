@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { ethers } from "ethers";
 import toast from "react-hot-toast";
-import { HARDHAT_CHAIN_ID, HARDHAT_NETWORK } from "../constants";
+import { BACKEND_URL, HARDHAT_CHAIN_ID, HARDHAT_NETWORK } from "../constants";
 
 export function useWallet() {
   const [account, setAccount] = useState(null);
@@ -11,6 +11,35 @@ export function useWallet() {
   const [chainId, setChainId] = useState(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isCorrectNetwork, setIsCorrectNetwork] = useState(false);
+  const [authToken, setAuthToken] = useState(() => localStorage.getItem("charity_auth_token"));
+
+  const authenticateWithBackend = useCallback(async (address, walletSigner) => {
+    try {
+      const nonceResponse = await fetch(`${BACKEND_URL}/api/auth/nonce`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address }),
+      });
+      const nonceJson = await nonceResponse.json();
+      if (!nonceJson.success) throw new Error(nonceJson.error);
+
+      const signature = await walletSigner.signMessage(nonceJson.data.message);
+      const verifyResponse = await fetch(`${BACKEND_URL}/api/auth/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address, signature }),
+      });
+      const verifyJson = await verifyResponse.json();
+      if (!verifyJson.success) throw new Error(verifyJson.error);
+
+      localStorage.setItem("charity_auth_token", verifyJson.data.token);
+      setAuthToken(verifyJson.data.token);
+      return verifyJson.data.token;
+    } catch (error) {
+      console.warn("Backend authentication skipped:", error.message);
+      return null;
+    }
+  }, []);
 
   // Check if MetaMask is installed
   const isMetaMaskInstalled = () => {
@@ -86,6 +115,7 @@ export function useWallet() {
       setIsCorrectNetwork(correct);
 
       await updateBalance(accounts[0], web3Provider);
+      await authenticateWithBackend(accounts[0], web3Signer);
 
       if (!correct) {
         toast("⚠️ Vui lòng chuyển sang mạng Hardhat Local (Chain ID: 31337)", {
@@ -105,7 +135,7 @@ export function useWallet() {
     } finally {
       setIsConnecting(false);
     }
-  }, [updateBalance]);
+  }, [authenticateWithBackend, updateBalance]);
 
   // Disconnect wallet
   const disconnectWallet = useCallback(() => {
@@ -115,6 +145,8 @@ export function useWallet() {
     setBalance("0");
     setChainId(null);
     setIsCorrectNetwork(false);
+    setAuthToken(null);
+    localStorage.removeItem("charity_auth_token");
     toast.success("Đã ngắt kết nối ví");
   }, []);
 
@@ -190,6 +222,7 @@ export function useWallet() {
     chainId,
     isConnecting,
     isCorrectNetwork,
+    authToken,
     isMetaMaskInstalled: isMetaMaskInstalled(),
     connectWallet,
     disconnectWallet,

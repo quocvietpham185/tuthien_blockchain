@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">Mountain school charity campaign</title>
+  <desc id="desc">A bright rural school in the mountains with children and books.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#6366f1"/>
+    </linearGradient>
+    <linearGradient id="hill" x1="0" x2="1">
+      <stop offset="0" stop-color="#14532d"/>
+      <stop offset="1" stop-color="#22c55e"/>
+    </linearGradient>
+    <linearGradient id="warm" x1="0" x2="1">
+      <stop offset="0" stop-color="#f59e0b"/>
+      <stop offset="1" stop-color="#ef4444"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="720" fill="url(#sky)"/>
+  <circle cx="1000" cy="120" r="76" fill="#fde68a" opacity=".95"/>
+  <path d="M0 390 185 180 365 386 520 220 760 430 960 230 1200 430v290H0z" fill="#172554" opacity=".42"/>
+  <path d="M0 470c180-78 315-92 515-20 220 80 415 72 685-44v314H0z" fill="url(#hill)"/>
+  <path d="M150 520h515v126H150z" fill="#f8fafc"/>
+  <path d="m118 520 292-165 292 165z" fill="url(#warm)"/>
+  <path d="M234 540h94v106h-94zM386 540h94v106h-94zM538 540h94v106h-94z" fill="#0f172a" opacity=".82"/>
+  <rect x="370" y="452" width="86" height="194" rx="6" fill="#78350f"/>
+  <path d="M832 500h210v118H832z" fill="#fef3c7"/>
+  <path d="m802 500 135-92 135 92z" fill="#fb7185"/>
+  <rect x="880" y="532" width="112" height="86" rx="8" fill="#2563eb"/>
+  <circle cx="176" cy="650" r="22" fill="#f97316"/>
+  <circle cx="226" cy="650" r="22" fill="#facc15"/>
+  <circle cx="276" cy="650" r="22" fill="#a78bfa"/>
+  <path d="M125 675h210" stroke="#f8fafc" stroke-width="14" stroke-linecap="round" opacity=".85"/>
+  <g fill="#f8fafc" opacity=".9">
+    <rect x="724" y="572" width="38" height="56" rx="4"/>
+    <rect x="770" y="546" width="38" height="82" rx="4"/>
+    <rect x="816" y="584" width="38" height="44" rx="4"/>
+  </g>
+</svg>

@@ -2,6 +2,24 @@ import axios from "axios";
 
 const BACKEND_URL = "http://localhost:5000";
 
+export const DEFAULT_CAMPAIGN_IMAGES = {
+  "Giáo dục": "/campaigns/education.svg",
+  "Y tế": "/campaigns/medical.svg",
+  "Thiên tai": "/campaigns/disaster.svg",
+  "Môi trường": "/campaigns/environment.svg",
+  "GiÃ¡o dá»¥c": "/campaigns/education.svg",
+  "Y táº¿": "/campaigns/medical.svg",
+  "ThiÃªn tai": "/campaigns/disaster.svg",
+  "MÃ´i trÆ°á»ng": "/campaigns/environment.svg",
+};
+
+const SAMPLE_IPFS_IMAGES = {
+  QmEducation123456789abcdef: "/campaigns/education.svg",
+  QmMedical987654321fedcba: "/campaigns/medical.svg",
+  QmDisaster555666777888: "/campaigns/disaster.svg",
+  QmEnvironment111222333: "/campaigns/environment.svg",
+};
+
 /**
  * Upload image to mock IPFS via backend
  * @param {File} file - Image file
@@ -38,7 +56,18 @@ export async function uploadMetadataToIPFS(metadata) {
 export function getIPFSUrl(cid) {
   if (!cid) return null;
   if (cid.startsWith("http")) return cid;
+  if (cid.startsWith("/")) return cid;
+  if (SAMPLE_IPFS_IMAGES[cid]) return SAMPLE_IPFS_IMAGES[cid];
   return `${BACKEND_URL}/ipfs/${cid}`;
+}
+
+export function getDefaultCampaignImage(category) {
+  return DEFAULT_CAMPAIGN_IMAGES[category] || "/campaigns/education.svg";
+}
+
+export function getCampaignImageUrl(campaign) {
+  if (!campaign) return null;
+  return getIPFSUrl(campaign.ipfsHash) || getDefaultCampaignImage(campaign.category);
 }
 
 /**

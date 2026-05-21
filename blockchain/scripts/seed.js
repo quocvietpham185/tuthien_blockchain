@@ -9,7 +9,7 @@ const SAMPLE_CAMPAIGNS = [
     description:
       "Dự án xây dựng trường học cho 200 em học sinh tại xã Mù Căng Chải, Yên Bái. Các em hiện phải đi bộ hơn 5km mỗi ngày để đến trường tạm bợ. Chúng tôi cần xây dựng 4 phòng học kiên cố với đầy đủ bàn ghế, sách giáo khoa và thiết bị học tập.",
     category: "Giáo dục",
-    ipfsHash: "QmEducation123456789abcdef",
+    ipfsHash: "/campaigns/education.svg",
     goal: hre.ethers.parseEther("2"),
     duration: 60,
   },
@@ -18,7 +18,7 @@ const SAMPLE_CAMPAIGNS = [
     description:
       "Quỹ hỗ trợ chi phí điều trị cho bệnh nhân ung thư có hoàn cảnh khó khăn tại Bệnh viện K Hà Nội. Mỗi tháng có hàng chục bệnh nhân không đủ tiền mua thuốc. Số tiền quyên góp sẽ được sử dụng minh bạch, có báo cáo hàng tháng.",
     category: "Y tế",
-    ipfsHash: "QmMedical987654321fedcba",
+    ipfsHash: "/campaigns/medical.svg",
     goal: hre.ethers.parseEther("5"),
     duration: 90,
   },
@@ -27,7 +27,7 @@ const SAMPLE_CAMPAIGNS = [
     description:
       "Hỗ trợ người dân các tỉnh Quảng Nam, Quảng Ngãi, Bình Định bị thiệt hại nặng nề do lũ lụt. Cung cấp lương thực, nước sạch, chăn màn và vật liệu sửa chữa nhà ở cho các gia đình bị ảnh hưởng.",
     category: "Thiên tai",
-    ipfsHash: "QmDisaster555666777888",
+    ipfsHash: "/campaigns/disaster.svg",
     goal: hre.ethers.parseEther("3"),
     duration: 30,
   },
@@ -36,7 +36,7 @@ const SAMPLE_CAMPAIGNS = [
     description:
       "Dự án phủ xanh đô thị, trồng 10,000 cây xanh tại các khu vực thiếu cây của Hà Nội. Kết hợp với các trường học và cộng đồng địa phương để đảm bảo cây được chăm sóc lâu dài. Mỗi cây được gắn QR code để theo dõi trên blockchain.",
     category: "Môi trường",
-    ipfsHash: "QmEnvironment111222333",
+    ipfsHash: "/campaigns/environment.svg",
     goal: hre.ethers.parseEther("1"),
     duration: 45,
   },

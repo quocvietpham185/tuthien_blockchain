@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { ethers } from "ethers";
 import toast from "react-hot-toast";
 import ContractABI from "../contracts/CharityDonation.json";
+import { HARDHAT_RPC_URL } from "../constants";
 
 export function useContract(signer, provider) {
   const getContract = useCallback(
@@ -10,7 +11,9 @@ export function useContract(signer, provider) {
       if (!config || !config.address) {
         throw new Error("Contract not deployed. Run: npm run deploy:local in blockchain/");
       }
-      const signerOrProvider = withSigner ? signer : provider;
+      const signerOrProvider = withSigner
+        ? signer
+        : provider || new ethers.JsonRpcProvider(HARDHAT_RPC_URL);
       if (!signerOrProvider) {
         throw new Error("Wallet not connected");
       }
@@ -96,6 +99,25 @@ export function useContract(signer, provider) {
     [getContract]
   );
 
+  const toggleCampaign = useCallback(
+    async (campaignId) => {
+      const contract = getContract(true);
+      const toastId = toast.loading("Dang cap nhat trang thai chien dich...");
+      try {
+        const tx = await contract.toggleCampaign(campaignId);
+        toast.loading("Dang cho xac nhan transaction...", { id: toastId });
+        const receipt = await tx.wait();
+        toast.success("Da cap nhat trang thai chien dich", { id: toastId });
+        return { success: true, txHash: receipt.hash, receipt };
+      } catch (error) {
+        const msg = error.reason || error.message || "Transaction failed";
+        toast.error("Loi cap nhat: " + msg, { id: toastId });
+        return { success: false, error: msg };
+      }
+    },
+    [getContract]
+  );
+
   /**
    * Get all campaigns
    */
@@ -163,6 +185,11 @@ export function useContract(signer, provider) {
     };
   }, [getContract]);
 
+  const getPlatformOwner = useCallback(async () => {
+    const contract = getContract(false);
+    return contract.platformOwner();
+  }, [getContract]);
+
   /**
    * Get contract address
    */
@@ -178,12 +205,14 @@ export function useContract(signer, provider) {
     createCampaign,
     donate,
     withdrawFunds,
+    toggleCampaign,
     getCampaigns,
     getCampaign,
     getCampaignDonations,
     getUserDonations,
     getAllTransactions,
     getPlatformStats,
+    getPlatformOwner,
     getContractAddress,
   };
 }

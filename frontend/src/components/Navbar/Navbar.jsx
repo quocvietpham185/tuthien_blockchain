@@ -18,6 +18,7 @@ export default function Navbar({ account, balance, chainId, isConnecting, connec
     { path: "/create", label: "Tạo Chiến Dịch", icon: "🚀" },
     { path: "/transactions", label: "Lịch Sử", icon: "📋" },
     { path: "/dashboard", label: "Dashboard", icon: "📊" },
+    { path: "/admin", label: "Admin", icon: "⚙" },
   ];
 
   return (

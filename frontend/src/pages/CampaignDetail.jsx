@@ -7,7 +7,7 @@ import {
   getTimeRemaining, getCampaignStatus, getCategoryClass,
   copyToClipboard
 } from "../utils/format";
-import { getIPFSUrl } from "../utils/ipfs";
+import { getCampaignImageUrl, getDefaultCampaignImage } from "../utils/ipfs";
 import toast from "react-hot-toast";
 
 export default function CampaignDetail({ contractHooks, account }) {
@@ -77,7 +77,7 @@ export default function CampaignDetail({ contractHooks, account }) {
   const status = getCampaignStatus(campaign);
   const timeLeft = getTimeRemaining(campaign.deadline);
   const isOwner = account?.toLowerCase() === campaign.owner.toLowerCase();
-  const imageUrl = getIPFSUrl(campaign.ipfsHash);
+  const imageUrl = getCampaignImageUrl(campaign);
 
   // Format donations for display with messages
   const donationsWithMessages = donations.map((d) => ({
@@ -99,7 +99,13 @@ export default function CampaignDetail({ contractHooks, account }) {
             {/* Image */}
             <div className="detail-image">
               {imageUrl ? (
-                <img src={imageUrl} alt={campaign.title} />
+                <img
+                  src={imageUrl}
+                  alt={campaign.title}
+                  onError={(event) => {
+                    event.currentTarget.src = getDefaultCampaignImage(campaign.category);
+                  }}
+                />
               ) : (
                 <div className="detail-image-placeholder">
                   {{ "Giáo dục": "🎓", "Y tế": "❤️", "Thiên tai": "🌊", "Môi trường": "🌿" }[campaign.category] || "🎯"}

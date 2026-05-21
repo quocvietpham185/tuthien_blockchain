@@ -40,7 +40,8 @@ router.post("/upload", upload.single("image"), async (req, res) => {
         url: result.url,
         fileName: result.fileName,
         size: result.size,
-        message: "File uploaded to IPFS (mock)",
+        provider: result.provider,
+        message: result.provider === "pinata" ? "File uploaded to Pinata IPFS" : "File uploaded to local mock IPFS",
       },
     });
   } catch (error) {

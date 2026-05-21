@@ -11,6 +11,12 @@ export default function Home({ contractHooks, account }) {
   const [filter, setFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [advancedFilters, setAdvancedFilters] = useState({
+    minGoal: "",
+    maxGoal: "",
+    deadline: "all",
+    sort: "newest",
+  });
 
   useEffect(() => {
     loadData();
@@ -45,8 +51,18 @@ export default function Home({ contractHooks, account }) {
     if (filter === "active" && (!c.active || Number(c.deadline) < now)) return false;
     if (filter === "completed" && (c.active && Number(c.deadline) >= now)) return false;
     if (categoryFilter !== "all" && c.category !== categoryFilter) return false;
-    if (search && !c.title.toLowerCase().includes(search.toLowerCase())) return false;
+    if (search && !`${c.title} ${c.description}`.toLowerCase().includes(search.toLowerCase())) return false;
+    if (advancedFilters.minGoal && Number(c.goal) < Number(advancedFilters.minGoal)) return false;
+    if (advancedFilters.maxGoal && Number(c.goal) > Number(advancedFilters.maxGoal)) return false;
+    if (advancedFilters.deadline === "7d" && Number(c.deadline) > now + 7 * 86400) return false;
+    if (advancedFilters.deadline === "30d" && Number(c.deadline) > now + 30 * 86400) return false;
+    if (advancedFilters.deadline === "expired" && Number(c.deadline) >= now) return false;
     return true;
+  }).sort((a, b) => {
+    if (advancedFilters.sort === "raised") return Number(b.raised) - Number(a.raised);
+    if (advancedFilters.sort === "goal") return Number(b.goal) - Number(a.goal);
+    if (advancedFilters.sort === "deadline") return Number(a.deadline) - Number(b.deadline);
+    return Number(b.createdAt) - Number(a.createdAt);
   });
 
   return (
@@ -165,6 +181,47 @@ export default function Home({ contractHooks, account }) {
                   {c.label}
                 </button>
               ))}
+            </div>
+
+            <div className="advanced-filters">
+              <input
+                type="number"
+                className="form-input"
+                placeholder="Min ETH"
+                min="0"
+                step="0.01"
+                value={advancedFilters.minGoal}
+                onChange={(e) => setAdvancedFilters((f) => ({ ...f, minGoal: e.target.value }))}
+              />
+              <input
+                type="number"
+                className="form-input"
+                placeholder="Max ETH"
+                min="0"
+                step="0.01"
+                value={advancedFilters.maxGoal}
+                onChange={(e) => setAdvancedFilters((f) => ({ ...f, maxGoal: e.target.value }))}
+              />
+              <select
+                className="form-select"
+                value={advancedFilters.deadline}
+                onChange={(e) => setAdvancedFilters((f) => ({ ...f, deadline: e.target.value }))}
+              >
+                <option value="all">Moi thoi han</option>
+                <option value="7d">Con duoi 7 ngay</option>
+                <option value="30d">Con duoi 30 ngay</option>
+                <option value="expired">Da het han</option>
+              </select>
+              <select
+                className="form-select"
+                value={advancedFilters.sort}
+                onChange={(e) => setAdvancedFilters((f) => ({ ...f, sort: e.target.value }))}
+              >
+                <option value="newest">Moi nhat</option>
+                <option value="raised">Nhieu quyen gop nhat</option>
+                <option value="goal">Muc tieu cao nhat</option>
+                <option value="deadline">Sap het han</option>
+              </select>
             </div>
           </div>
 

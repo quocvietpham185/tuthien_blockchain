@@ -56,6 +56,7 @@ contract CharityDonation is ReentrancyGuard {
     mapping(uint256 => Donation[]) public campaignDonations;
     mapping(address => Donation[]) public userDonations;
     mapping(address => uint256[]) public userCreatedCampaigns;
+    mapping(uint256 => mapping(address => bool)) public campaignDonorHasDonated;
     TransactionRecord[] public allTransactions;
 
     // ==================== EVENTS ====================
@@ -105,6 +106,14 @@ contract CharityDonation is ReentrancyGuard {
         _;
     }
 
+    modifier onlyCampaignOwnerOrPlatformOwner(uint256 _id) {
+        require(
+            campaigns[_id].owner == msg.sender || platformOwner == msg.sender,
+            "Not authorized"
+        );
+        _;
+    }
+
     modifier campaignIsActive(uint256 _id) {
         require(campaigns[_id].active, "Campaign is not active");
         require(block.timestamp <= campaigns[_id].deadline, "Campaign has expired");
@@ -138,6 +147,10 @@ contract CharityDonation is ReentrancyGuard {
     ) external returns (uint256) {
         require(bytes(_title).length > 0, "Title is required");
         require(bytes(_description).length > 0, "Description is required");
+        require(bytes(_title).length <= 100, "Title too long");
+        require(bytes(_description).length <= 1000, "Description too long");
+        require(bytes(_category).length <= 50, "Category too long");
+        require(bytes(_ipfsHash).length <= 128, "IPFS hash too long");
         require(_goal > 0, "Goal must be greater than 0");
         require(_durationDays >= 1 && _durationDays <= 365, "Duration must be 1-365 days");
 
@@ -203,7 +216,10 @@ contract CharityDonation is ReentrancyGuard {
 
         Campaign storage campaign = campaigns[_campaignId];
         campaign.raised += msg.value;
-        campaign.donorCount++;
+        if (!campaignDonorHasDonated[_campaignId][msg.sender]) {
+            campaignDonorHasDonated[_campaignId][msg.sender] = true;
+            campaign.donorCount++;
+        }
         totalDonations += msg.value;
 
         Donation memory newDonation = Donation({
@@ -279,7 +295,7 @@ contract CharityDonation is ReentrancyGuard {
     function toggleCampaign(uint256 _campaignId)
         external
         campaignExists(_campaignId)
-        onlyCampaignOwner(_campaignId)
+        onlyCampaignOwnerOrPlatformOwner(_campaignId)
     {
         Campaign storage campaign = campaigns[_campaignId];
         require(!campaign.withdrawn, "Campaign already completed");

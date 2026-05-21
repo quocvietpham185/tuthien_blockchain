@@ -4,19 +4,21 @@ import TransactionHistory from "../components/TransactionHistory/TransactionHist
 import CampaignCard from "../components/CampaignCard/CampaignCard";
 import DonationModal from "../components/DonationModal/DonationModal";
 import { formatEth, formatAddress, copyToClipboard } from "../utils/format";
+import { BACKEND_URL } from "../constants";
 import toast from "react-hot-toast";
 
-export default function Dashboard({ contractHooks, account }) {
+export default function Dashboard({ contractHooks, account, authToken }) {
   const navigate = useNavigate();
   const [myCampaigns, setMyCampaigns] = useState([]);
   const [myDonations, setMyDonations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [stats, setStats] = useState({ donated: 0, created: 0, total: 0 });
+  const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
     if (account) loadDashboard();
-  }, [account]);
+  }, [account, authToken]);
 
   const loadDashboard = async () => {
     setLoading(true);
@@ -45,6 +47,14 @@ export default function Dashboard({ contractHooks, account }) {
         created: owned.length,
         total: userDons.length,
       });
+
+      if (authToken) {
+        const response = await fetch(`${BACKEND_URL}/api/notifications?unreadOnly=true`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+        const json = await response.json();
+        if (json.success) setNotifications(json.data.slice(0, 5));
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -126,6 +136,37 @@ export default function Dashboard({ contractHooks, account }) {
         )}
 
         {/* My Campaigns */}
+        {notifications.length > 0 && (
+          <div className="card" style={{ marginBottom: 32 }}>
+            <div className="section-header">
+              <div>
+                <h2 className="section-title">Thong bao moi</h2>
+                <p className="section-subtitle">{notifications.length} su kien lien quan den vi cua ban</p>
+              </div>
+              <button
+                className="btn btn-outline btn-sm"
+                onClick={async () => {
+                  await fetch(`${BACKEND_URL}/api/notifications/read-all`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${authToken}` },
+                  });
+                  setNotifications([]);
+                }}
+              >
+                Danh dau da doc
+              </button>
+            </div>
+            <div className="admin-list">
+              {notifications.map((item) => (
+                <div key={item.id} className="admin-mini-row">
+                  <span>{item.type.replaceAll("_", " ")} #{item.payload?.campaignId || ""}</span>
+                  <strong>{item.payload?.amount ? `${item.payload.amount} ETH` : item.payload?.title}</strong>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div style={{ marginBottom: 48 }}>
           <div className="section-header">
             <div>

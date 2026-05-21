@@ -34,6 +34,14 @@ function generateCID(content) {
  * @returns {object} { cid, url, size }
  */
 async function uploadFile(fileBuffer, originalName, mimeType) {
+  if (process.env.PINATA_JWT) {
+    try {
+      return await uploadFileToPinata(fileBuffer, originalName, mimeType);
+    } catch (error) {
+      console.warn(`[IPFS] Pinata upload failed, falling back to local storage: ${error.message}`);
+    }
+  }
+
   const ext = path.extname(originalName) || ".bin";
   const cid = generateCID(fileBuffer);
   const fileName = `${cid}${ext}`;
@@ -54,6 +62,7 @@ async function uploadFile(fileBuffer, originalName, mimeType) {
     url,
     size: fileBuffer.length,
     mimeType,
+    provider: "local",
     uploadedAt: new Date().toISOString(),
   };
 }
@@ -64,6 +73,14 @@ async function uploadFile(fileBuffer, originalName, mimeType) {
  * @returns {object} { cid, url }
  */
 async function uploadJSON(metadata) {
+  if (process.env.PINATA_JWT) {
+    try {
+      return await uploadJSONToPinata(metadata);
+    } catch (error) {
+      console.warn(`[IPFS] Pinata JSON upload failed, falling back to local storage: ${error.message}`);
+    }
+  }
+
   const content = JSON.stringify(metadata, null, 2);
   const cid = generateCID(content);
   const fileName = `${cid}.json`;
@@ -80,8 +97,74 @@ async function uploadJSON(metadata) {
     cid,
     fileName,
     url,
+    provider: "local",
     uploadedAt: new Date().toISOString(),
   };
+}
+
+async function uploadFileToPinata(fileBuffer, originalName, mimeType) {
+  const form = new FormData();
+  const blob = new Blob([fileBuffer], { type: mimeType || "application/octet-stream" });
+  form.append("file", blob, originalName || "upload.bin");
+
+  const response = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.PINATA_JWT}`,
+    },
+    body: form,
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Pinata returned ${response.status}: ${text}`);
+  }
+
+  const data = await response.json();
+  const cid = data.IpfsHash;
+  return {
+    cid,
+    fileName: originalName,
+    url: getGatewayUrl(cid),
+    size: fileBuffer.length,
+    mimeType,
+    provider: "pinata",
+    uploadedAt: new Date().toISOString(),
+  };
+}
+
+async function uploadJSONToPinata(metadata) {
+  const response = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.PINATA_JWT}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      pinataContent: metadata,
+      pinataMetadata: { name: metadata?.name || "campaign-metadata" },
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Pinata returned ${response.status}: ${text}`);
+  }
+
+  const data = await response.json();
+  const cid = data.IpfsHash;
+  return {
+    cid,
+    fileName: `${cid}.json`,
+    url: getGatewayUrl(cid),
+    provider: "pinata",
+    uploadedAt: new Date().toISOString(),
+  };
+}
+
+function getGatewayUrl(cid) {
+  const gateway = process.env.IPFS_GATEWAY_URL || "https://gateway.pinata.cloud/ipfs";
+  return `${gateway.replace(/\/$/, "")}/${cid}`;
 }
 
 /**
@@ -135,6 +218,8 @@ async function listFiles() {
  */
 function getIPFSUrl(cid) {
   if (!cid) return null;
+  if (cid.startsWith("http")) return cid;
+  if (process.env.PINATA_JWT) return getGatewayUrl(cid);
   const baseUrl = process.env.IPFS_BASE_URL || "http://localhost:5000/ipfs";
 
   // Check if file exists with any extension

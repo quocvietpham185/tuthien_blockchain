@@ -130,6 +130,7 @@ frontend/            ← React + Vite DApp
 ```
 GET  /api/health              - Status
 GET  /api/stats               - Platform statistics
+GET  /api/stats?advanced=true - Advanced statistics
 GET  /api/campaigns           - All campaigns
 GET  /api/campaigns/:id       - Single campaign
 GET  /api/campaigns/:id/donations - Campaign donations
@@ -139,4 +140,20 @@ GET  /api/transactions/events - Raw blockchain events
 POST /api/ipfs/upload         - Upload image to IPFS
 POST /api/ipfs/upload-json    - Upload metadata to IPFS
 GET  /api/ipfs/files          - List IPFS files
+POST /api/auth/nonce          - Wallet login nonce
+POST /api/auth/verify         - Verify wallet signature and return token
+GET  /api/auth/me             - Current wallet session
+GET  /api/admin/overview      - Protected platform owner overview
+GET  /api/notifications       - Protected wallet notifications
+POST /api/notifications/read-all - Mark wallet notifications as read
+```
+
+### Optional production config
+
+Backend supports real IPFS through Pinata. If `PINATA_JWT` is set, uploads use
+Pinata first and fall back to local mock storage if Pinata is unavailable.
+
+```bash
+PINATA_JWT=your_pinata_jwt
+IPFS_GATEWAY_URL=https://gateway.pinata.cloud/ipfs
 ```

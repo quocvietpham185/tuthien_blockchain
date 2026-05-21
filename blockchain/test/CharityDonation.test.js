@@ -99,6 +99,45 @@ describe("CharityDonation", function () {
       const campaign = await charity.getCampaign(1);
       expect(campaign.donorCount).to.equal(2);
     });
+
+    it("Should count repeat donor once", async function () {
+      await charity.connect(user1).donate(1, "", { value: ethers.parseEther("0.1") });
+      await charity.connect(user1).donate(1, "", { value: ethers.parseEther("0.2") });
+      const campaign = await charity.getCampaign(1);
+      expect(campaign.donorCount).to.equal(1);
+      expect(campaign.raised).to.equal(ethers.parseEther("0.3"));
+    });
+  });
+
+  describe("toggleCampaign", function () {
+    beforeEach(async function () {
+      await charity.connect(user1).createCampaign(
+        "Campaign",
+        "Desc",
+        "Education",
+        "QmHash",
+        ethers.parseEther("5"),
+        30
+      );
+    });
+
+    it("Should allow campaign owner to toggle", async function () {
+      await charity.connect(user1).toggleCampaign(1);
+      const campaign = await charity.getCampaign(1);
+      expect(campaign.active).to.equal(false);
+    });
+
+    it("Should allow platform owner to toggle", async function () {
+      await charity.toggleCampaign(1);
+      const campaign = await charity.getCampaign(1);
+      expect(campaign.active).to.equal(false);
+    });
+
+    it("Should reject unrelated account", async function () {
+      await expect(charity.connect(user2).toggleCampaign(1)).to.be.revertedWith(
+        "Not authorized"
+      );
+    });
   });
 
   describe("withdrawFunds", function () {
