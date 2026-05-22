@@ -3,6 +3,7 @@ import { ethers } from "ethers";
 import toast from "react-hot-toast";
 import ContractABI from "../contracts/CharityDonation.json";
 import { HARDHAT_RPC_URL } from "../constants";
+import { fixVietnameseText } from "../utils/format";
 
 export function useContract(signer, provider) {
   const getContract = useCallback(
@@ -284,9 +285,9 @@ function formatCampaign(c) {
   return {
     id: c.id.toString(),
     owner: c.owner,
-    title: c.title,
-    description: c.description,
-    category: c.category,
+    title: fixVietnameseText(c.title),
+    description: fixVietnameseText(c.description),
+    category: fixVietnameseText(c.category),
     ipfsHash: c.ipfsHash,
     goal: ethers.formatEther(c.goal),
     goalWei: c.goal.toString(),
@@ -308,7 +309,7 @@ function formatDonation(d) {
     amount: ethers.formatEther(d.amount),
     amountWei: d.amount.toString(),
     timestamp: Number(d.timestamp),
-    message: d.message,
+    message: fixVietnameseText(d.message),
   };
 }
 
@@ -320,6 +321,6 @@ function formatTransaction(t) {
     amount: ethers.formatEther(t.amount),
     amountWei: t.amount.toString(),
     timestamp: Number(t.timestamp),
-    campaignTitle: t.campaignTitle,
+    campaignTitle: fixVietnameseText(t.campaignTitle),
   };
 }

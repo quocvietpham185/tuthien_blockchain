@@ -90,6 +90,7 @@ export function useWallet() {
 
     setIsConnecting(true);
     try {
+      localStorage.removeItem("charity_wallet_disconnected");
       const web3Provider = new ethers.BrowserProvider(window.ethereum);
       
       // Request account access
@@ -147,6 +148,7 @@ export function useWallet() {
     setIsCorrectNetwork(false);
     setAuthToken(null);
     localStorage.removeItem("charity_auth_token");
+    localStorage.setItem("charity_wallet_disconnected", "true");
     toast.success("Đã ngắt kết nối ví");
   }, []);
 
@@ -154,6 +156,7 @@ export function useWallet() {
   useEffect(() => {
     const autoConnect = async () => {
       if (!isMetaMaskInstalled()) return;
+      if (localStorage.getItem("charity_wallet_disconnected") === "true") return;
       try {
         const accounts = await window.ethereum.request({ method: "eth_accounts" });
         if (accounts.length > 0) {
@@ -181,6 +184,16 @@ export function useWallet() {
     if (!isMetaMaskInstalled()) return;
 
     const handleAccountsChanged = async (accounts) => {
+      if (localStorage.getItem("charity_wallet_disconnected") === "true") {
+        setAccount(null);
+        setProvider(null);
+        setSigner(null);
+        setBalance("0");
+        setChainId(null);
+        setIsCorrectNetwork(false);
+        return;
+      }
+
       if (accounts.length === 0) {
         disconnectWallet();
         toast("Ví đã ngắt kết nối", { icon: "ℹ️" });

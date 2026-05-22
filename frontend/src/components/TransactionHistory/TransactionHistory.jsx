@@ -45,6 +45,7 @@ export default function TransactionHistory({ transactions, loading, title = "Lá»
       <div className="tx-list">
         {transactions.map((tx, idx) => {
           const typeInfo = TX_TYPE_LABELS[tx.txType] || TX_TYPE_LABELS.DONATE;
+          const amountPrefix = tx.txType === "DONATE" ? "+" : tx.txType === "REFUND" ? "-" : "";
           return (
             <div key={idx} className="tx-item">
               {/* Type Icon */}
@@ -81,7 +82,7 @@ export default function TransactionHistory({ transactions, loading, title = "Lá»
               <div className="tx-amount-col">
                 {parseFloat(tx.amount) > 0 && (
                   <div className="tx-amount" style={{ color: typeInfo.color }}>
-                    {tx.txType === "WITHDRAW" ? "" : "+"}{formatEth(tx.amount)} ETH
+                    {amountPrefix}{formatEth(tx.amount)} ETH
                   </div>
                 )}
               </div>

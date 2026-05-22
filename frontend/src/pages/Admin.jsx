@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { BACKEND_URL } from "../constants";
-import { formatAddress, formatEth, formatDateTime, copyToClipboard } from "../utils/format";
+import { formatAddress, formatEth, formatDateTime, copyToClipboard, getCampaignStatus } from "../utils/format";
 import toast from "react-hot-toast";
 
 export default function Admin({ contractHooks, account, authToken }) {
@@ -151,28 +151,33 @@ export default function Admin({ contractHooks, account, authToken }) {
                   Quan ly chien dich
                 </h2>
                 <div className="admin-table">
-                  {campaigns.map((campaign) => (
-                    <div key={campaign.id} className="admin-row">
-                      <div>
-                        <strong>#{campaign.id} {campaign.title}</strong>
-                        <p>
-                          {formatAddress(campaign.owner)} Â· {formatEth(campaign.raised)}/{formatEth(campaign.goal)} ETH
-                        </p>
+                  {campaigns.map((campaign) => {
+                    const status = getCampaignStatus(campaign);
+                    const canToggle = status.key === "active" || status.key === "paused";
+
+                    return (
+                      <div key={campaign.id} className="admin-row">
+                        <div>
+                          <strong>#{campaign.id} {campaign.title}</strong>
+                          <p>
+                            {formatAddress(campaign.owner)} · {formatEth(campaign.raised)}/{formatEth(campaign.goal)} ETH
+                          </p>
+                        </div>
+                        <div className="admin-row-actions">
+                          <span className={`badge badge-${status.color}`}>
+                            {status.label}
+                          </span>
+                          <button
+                            className="btn btn-sm btn-secondary"
+                            disabled={busyId === campaign.id || !canToggle}
+                            onClick={() => toggleCampaign(campaign.id)}
+                          >
+                            {busyId === campaign.id ? "Dang xu ly..." : campaign.active ? "Tam dung" : "Mo lai"}
+                          </button>
+                        </div>
                       </div>
-                      <div className="admin-row-actions">
-                        <span className={`badge badge-${campaign.active ? "active" : "expired"}`}>
-                          {campaign.active ? "Active" : "Paused"}
-                        </span>
-                        <button
-                          className="btn btn-sm btn-secondary"
-                          disabled={busyId === campaign.id || campaign.withdrawn}
-                          onClick={() => toggleCampaign(campaign.id)}
-                        >
-                          {busyId === campaign.id ? "Dang xu ly..." : campaign.active ? "Tam dung" : "Mo lai"}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -230,3 +235,4 @@ export default function Admin({ contractHooks, account, authToken }) {
     </div>
   );
 }
+

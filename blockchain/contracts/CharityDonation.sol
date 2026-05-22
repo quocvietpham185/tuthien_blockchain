@@ -236,6 +236,7 @@ contract CharityDonation is ReentrancyGuard {
         require(msg.value > 0, "Donation must be greater than 0");
 
         Campaign storage campaign = campaigns[_campaignId];
+        require(campaign.raised < campaign.goal, "Campaign already reached goal");
         campaign.raised += msg.value;
         if (!campaignDonorHasDonated[_campaignId][msg.sender]) {
             campaignDonorHasDonated[_campaignId][msg.sender] = true;

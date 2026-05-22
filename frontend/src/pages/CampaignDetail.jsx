@@ -20,6 +20,7 @@ export default function CampaignDetail({ contractHooks, account }) {
   const [withdrawing, setWithdrawing] = useState(false);
   const [refunding, setRefunding] = useState(false);
   const [refundableAmount, setRefundableAmount] = useState("0");
+  const [platformFee, setPlatformFee] = useState("0");
   const [activeTab, setActiveTab] = useState("info");
 
   useEffect(() => { loadCampaign(); }, [id, account]);
@@ -32,6 +33,7 @@ export default function CampaignDetail({ contractHooks, account }) {
         contractHooks.getCampaignDonations(id),
       ]);
       setCampaign(c);
+      setPlatformFee(await contractHooks.getPlatformFee());
       // Convert donations to transaction format for TransactionHistory
       const txFormat = d.map((don) => ({
         txType: "DONATE",
@@ -96,6 +98,15 @@ export default function CampaignDetail({ contractHooks, account }) {
   const imageUrl = getCampaignImageUrl(campaign);
   const goalReached = BigInt(campaign.raisedWei) >= BigInt(campaign.goalWei);
   const hasRefund = parseFloat(refundableAmount) > 0;
+  const feeRate = Number(platformFee) / 10000;
+  const platformFeeAmount = parseFloat(campaign.raised || 0) * feeRate;
+  const ownerReceives = Math.max(0, parseFloat(campaign.raised || 0) - platformFeeAmount);
+  const actionNote = {
+    goalReached: "Chiến dịch đã đạt mục tiêu. Chủ chiến dịch có thể rút tiền.",
+    failed: "Chiến dịch đã hết hạn và không đạt mục tiêu. Donor có thể hoàn tiền.",
+    paused: "Chiến dịch đang tạm dừng nên chưa nhận quyên góp mới.",
+    completed: "Chiến dịch đã hoàn thành và tiền đã được giải ngân.",
+  }[status.key];
 
   // Format donations for display with messages
   const donationsWithMessages = donations.map((d) => ({
@@ -242,6 +253,16 @@ export default function CampaignDetail({ contractHooks, account }) {
                     <span className="blockchain-label">Status</span>
                     <span className={`badge badge-${status.color}`}>{status.label}</span>
                   </div>
+                  <div className="blockchain-row">
+                    <span className="blockchain-label">Platform Fee</span>
+                    <span className="blockchain-value">{platformFee} bps ({(Number(platformFee) / 100).toFixed(2)}%)</span>
+                  </div>
+                  {account && (
+                    <div className="blockchain-row">
+                      <span className="blockchain-label">Refundable</span>
+                      <span className="blockchain-value">{formatEth(refundableAmount)} ETH</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -289,7 +310,7 @@ export default function CampaignDetail({ contractHooks, account }) {
               <hr className="divider" />
 
               {/* Donate Button */}
-              {campaign.active && !timeLeft.expired && (
+              {status.canDonate && (
                 <>
                   {account ? (
                     <button
@@ -307,13 +328,23 @@ export default function CampaignDetail({ contractHooks, account }) {
                 </>
               )}
 
+              {!status.canDonate && actionNote && (
+                <div className={`alert ${status.key === "failed" ? "alert-warning" : "alert-info"}`}>
+                  <span>i</span>
+                  <span>{actionNote}</span>
+                </div>
+              )}
+
               {/* Withdraw (owner only) */}
-              {isOwner && parseFloat(campaign.raised) > 0 && !campaign.withdrawn && goalReached && (
+              {isOwner && parseFloat(campaign.raised) > 0 && status.canWithdraw && (
                 <>
                   <hr className="divider" />
                   <div className="alert alert-info" style={{ marginBottom: 12 }}>
                     <span>💡</span>
-                    <span>Bạn là chủ chiến dịch. Có thể rút {formatEth(campaign.raised)} ETH.</span>
+                    <span>
+                      Bạn là chủ chiến dịch. Dự kiến nhận {formatEth(ownerReceives)} ETH
+                      {Number(platformFee) > 0 ? ` sau phí nền tảng ${formatEth(platformFeeAmount)} ETH.` : "."}
+                    </span>
                   </div>
                   <button
                     className="btn btn-success btn-full"
@@ -325,7 +356,7 @@ export default function CampaignDetail({ contractHooks, account }) {
                 </>
               )}
 
-              {isOwner && parseFloat(campaign.raised) > 0 && !campaign.withdrawn && !goalReached && (
+              {isOwner && parseFloat(campaign.raised) > 0 && !campaign.withdrawn && !goalReached && !timeLeft.expired && (
                 <>
                   <hr className="divider" />
                   <div className="alert alert-warning">
@@ -335,7 +366,7 @@ export default function CampaignDetail({ contractHooks, account }) {
                 </>
               )}
 
-              {account && timeLeft.expired && !goalReached && !campaign.withdrawn && hasRefund && (
+              {account && status.canRefund && hasRefund && (
                 <>
                   <hr className="divider" />
                   <div className="alert alert-warning" style={{ marginBottom: 12 }}>

@@ -6,10 +6,6 @@ export const DEFAULT_CAMPAIGN_IMAGES = {
   "Y tế": "/campaigns/medical.svg",
   "Thiên tai": "/campaigns/disaster.svg",
   "Môi trường": "/campaigns/environment.svg",
-  "GiÃ¡o dá»¥c": "/campaigns/education.svg",
-  "Y táº¿": "/campaigns/medical.svg",
-  "ThiÃªn tai": "/campaigns/disaster.svg",
-  "MÃ´i trÆ°á»ng": "/campaigns/environment.svg",
 };
 
 const SAMPLE_IPFS_IMAGES = {
@@ -19,12 +15,6 @@ const SAMPLE_IPFS_IMAGES = {
   QmEnvironment111222333: "/campaigns/environment.svg",
 };
 
-/**
- * Upload image to IPFS via backend. Backend uses Pinata when PINATA_JWT is set,
- * otherwise it falls back to local mock storage.
- * @param {File} file - Image file
- * @returns {object} { cid, url }
- */
 export async function uploadImageToIPFS(file) {
   const formData = new FormData();
   formData.append("image", file);
@@ -40,19 +30,11 @@ export async function uploadImageToIPFS(file) {
   return response.data.data;
 }
 
-/**
- * Upload JSON metadata to IPFS
- * @param {object} metadata
- * @returns {object} { cid, url }
- */
 export async function uploadMetadataToIPFS(metadata) {
   const response = await axios.post(`${BACKEND_URL}/api/ipfs/upload-json`, metadata);
   return response.data.data;
 }
 
-/**
- * Get IPFS file URL from CID
- */
 export function getIPFSUrl(cid) {
   if (!cid) return null;
   if (cid.startsWith("http")) return cid;
@@ -70,9 +52,6 @@ export function getCampaignImageUrl(campaign) {
   return getIPFSUrl(campaign.ipfsHash) || getDefaultCampaignImage(campaign.category);
 }
 
-/**
- * List all IPFS files
- */
 export async function listIPFSFiles() {
   const response = await axios.get(`${BACKEND_URL}/api/ipfs/files`);
   return response.data.data;

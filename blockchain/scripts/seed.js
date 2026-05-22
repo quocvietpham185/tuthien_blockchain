@@ -37,7 +37,7 @@ const SAMPLE_CAMPAIGNS = [
       "Dự án phủ xanh đô thị, trồng 10,000 cây xanh tại các khu vực thiếu cây của Hà Nội. Kết hợp với các trường học và cộng đồng địa phương để đảm bảo cây được chăm sóc lâu dài. Mỗi cây được gắn QR code để theo dõi trên blockchain.",
     category: "Môi trường",
     ipfsHash: "/campaigns/environment.svg",
-    goal: hre.ethers.parseEther("1"),
+    goal: hre.ethers.parseEther("2"),
     duration: 45,
   },
 ];

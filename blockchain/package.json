@@ -8,6 +8,7 @@
     "node": "hardhat node",
     "deploy:local": "hardhat run scripts/deploy.js --network localhost",
     "seed:local": "hardhat run scripts/seed.js --network localhost",
+    "demo:refund": "hardhat run scripts/demo-refund.js --network localhost",
     "clean": "hardhat clean"
   },
   "devDependencies": {

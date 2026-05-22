@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useEffect, useState } from "react";
 import CampaignCard from "../components/CampaignCard/CampaignCard";
 import DonationModal from "../components/DonationModal/DonationModal";
 import { CATEGORIES } from "../constants";
@@ -25,14 +25,14 @@ export default function Home({ contractHooks, account }) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [cList, pStats] = await Promise.all([
+      const [campaignList, platformStats] = await Promise.all([
         contractHooks.getCampaigns(),
         contractHooks.getPlatformStats(),
       ]);
-      setCampaigns(cList.reverse()); // newest first
-      setStats(pStats);
-    } catch (err) {
-      console.error("Load error:", err);
+      setCampaigns([...campaignList].reverse());
+      setStats(platformStats);
+    } catch (error) {
+      console.error("Load error:", error);
     } finally {
       setLoading(false);
     }
@@ -45,33 +45,33 @@ export default function Home({ contractHooks, account }) {
     return result;
   };
 
-  // Filter campaigns
   const now = Math.floor(Date.now() / 1000);
-  const filtered = campaigns.filter((c) => {
-    if (filter === "active" && (!c.active || Number(c.deadline) < now)) return false;
-    if (filter === "completed" && (c.active && Number(c.deadline) >= now)) return false;
-    if (categoryFilter !== "all" && c.category !== categoryFilter) return false;
-    if (search && !`${c.title} ${c.description}`.toLowerCase().includes(search.toLowerCase())) return false;
-    if (advancedFilters.minGoal && Number(c.goal) < Number(advancedFilters.minGoal)) return false;
-    if (advancedFilters.maxGoal && Number(c.goal) > Number(advancedFilters.maxGoal)) return false;
-    if (advancedFilters.deadline === "7d" && Number(c.deadline) > now + 7 * 86400) return false;
-    if (advancedFilters.deadline === "30d" && Number(c.deadline) > now + 30 * 86400) return false;
-    if (advancedFilters.deadline === "expired" && Number(c.deadline) >= now) return false;
-    return true;
-  }).sort((a, b) => {
-    if (advancedFilters.sort === "raised") return Number(b.raised) - Number(a.raised);
-    if (advancedFilters.sort === "goal") return Number(b.goal) - Number(a.goal);
-    if (advancedFilters.sort === "deadline") return Number(a.deadline) - Number(b.deadline);
-    return Number(b.createdAt) - Number(a.createdAt);
-  });
+  const filtered = campaigns
+    .filter((campaign) => {
+      if (filter === "active" && (!campaign.active || Number(campaign.deadline) < now)) return false;
+      if (filter === "completed" && campaign.active && Number(campaign.deadline) >= now) return false;
+      if (categoryFilter !== "all" && campaign.category !== categoryFilter) return false;
+      if (search && !`${campaign.title} ${campaign.description}`.toLowerCase().includes(search.toLowerCase())) return false;
+      if (advancedFilters.minGoal && Number(campaign.goal) < Number(advancedFilters.minGoal)) return false;
+      if (advancedFilters.maxGoal && Number(campaign.goal) > Number(advancedFilters.maxGoal)) return false;
+      if (advancedFilters.deadline === "7d" && Number(campaign.deadline) > now + 7 * 86400) return false;
+      if (advancedFilters.deadline === "30d" && Number(campaign.deadline) > now + 30 * 86400) return false;
+      if (advancedFilters.deadline === "expired" && Number(campaign.deadline) >= now) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (advancedFilters.sort === "raised") return Number(b.raised) - Number(a.raised);
+      if (advancedFilters.sort === "goal") return Number(b.goal) - Number(a.goal);
+      if (advancedFilters.sort === "deadline") return Number(a.deadline) - Number(b.deadline);
+      return Number(b.createdAt) - Number(a.createdAt);
+    });
 
   return (
     <div className="page-content">
-      {/* Hero Section */}
       <section className="home-hero">
         <div className="container">
           <div className="hero-content">
-            <div className="hero-badge">⛓️ Powered by Blockchain</div>
+            <div className="hero-badge">Powered by Blockchain</div>
             <h1 className="hero-title">
               Quyên Góp Minh Bạch
               <br />
@@ -82,7 +82,6 @@ export default function Home({ contractHooks, account }) {
               không thể xóa. Hoàn toàn minh bạch và phi tập trung.
             </p>
 
-            {/* Platform Stats */}
             {stats && (
               <div className="hero-stats">
                 <div className="hero-stat">
@@ -102,69 +101,48 @@ export default function Home({ contractHooks, account }) {
               </div>
             )}
           </div>
-
-          {/* Floating blockchain visual */}
-          <div className="hero-visual">
-            <div className="blockchain-visual">
-              {["⛓️", "🔒", "💎", "🌐"].map((icon, i) => (
-                <div
-                  key={i}
-                  className="block-node"
-                  style={{ animationDelay: `${i * 0.5}s` }}
-                >
-                  {icon}
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </section>
 
-      {/* Campaigns Section */}
       <section className="home-campaigns">
         <div className="container">
-          {/* Filters */}
           <div className="campaigns-header">
             <div>
-              <h2 className="section-title">🎯 Các Chiến Dịch Từ Thiện</h2>
+              <h2 className="section-title">Các Chiến Dịch Từ Thiện</h2>
               <p className="section-subtitle">
                 {loading ? "Đang tải..." : `${filtered.length} chiến dịch`}
               </p>
             </div>
           </div>
 
-          {/* Search & Filter Bar */}
           <div className="filter-bar">
-            {/* Search */}
             <div className="search-wrapper">
-              <span className="search-icon">🔍</span>
+              <span className="search-icon">Tìm</span>
               <input
                 type="text"
                 className="form-input search-input"
                 placeholder="Tìm chiến dịch..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(event) => setSearch(event.target.value)}
               />
             </div>
 
-            {/* Status Filter */}
             <div className="filter-tabs">
               {[
                 { key: "all", label: "Tất cả" },
-                { key: "active", label: "🟢 Đang chạy" },
-                { key: "completed", label: "✅ Hoàn thành" },
-              ].map((f) => (
+                { key: "active", label: "Đang chạy" },
+                { key: "completed", label: "Hoàn thành" },
+              ].map((item) => (
                 <button
-                  key={f.key}
-                  className={`tag ${filter === f.key ? "active" : ""}`}
-                  onClick={() => setFilter(f.key)}
+                  key={item.key}
+                  className={`tag ${filter === item.key ? "active" : ""}`}
+                  onClick={() => setFilter(item.key)}
                 >
-                  {f.label}
+                  {item.label}
                 </button>
               ))}
             </div>
 
-            {/* Category Filter */}
             <div className="filter-tabs">
               <button
                 className={`tag ${categoryFilter === "all" ? "active" : ""}`}
@@ -172,13 +150,13 @@ export default function Home({ contractHooks, account }) {
               >
                 Tất cả loại
               </button>
-              {CATEGORIES.map((c) => (
+              {CATEGORIES.map((category) => (
                 <button
-                  key={c.value}
-                  className={`tag ${categoryFilter === c.value ? "active" : ""}`}
-                  onClick={() => setCategoryFilter(c.value)}
+                  key={category.value}
+                  className={`tag ${categoryFilter === category.value ? "active" : ""}`}
+                  onClick={() => setCategoryFilter(category.value)}
                 >
-                  {c.label}
+                  {category.label}
                 </button>
               ))}
             </div>
@@ -191,7 +169,7 @@ export default function Home({ contractHooks, account }) {
                 min="0"
                 step="0.01"
                 value={advancedFilters.minGoal}
-                onChange={(e) => setAdvancedFilters((f) => ({ ...f, minGoal: e.target.value }))}
+                onChange={(event) => setAdvancedFilters((value) => ({ ...value, minGoal: event.target.value }))}
               />
               <input
                 type="number"
@@ -200,32 +178,31 @@ export default function Home({ contractHooks, account }) {
                 min="0"
                 step="0.01"
                 value={advancedFilters.maxGoal}
-                onChange={(e) => setAdvancedFilters((f) => ({ ...f, maxGoal: e.target.value }))}
+                onChange={(event) => setAdvancedFilters((value) => ({ ...value, maxGoal: event.target.value }))}
               />
               <select
                 className="form-select"
                 value={advancedFilters.deadline}
-                onChange={(e) => setAdvancedFilters((f) => ({ ...f, deadline: e.target.value }))}
+                onChange={(event) => setAdvancedFilters((value) => ({ ...value, deadline: event.target.value }))}
               >
-                <option value="all">Moi thoi han</option>
-                <option value="7d">Con duoi 7 ngay</option>
-                <option value="30d">Con duoi 30 ngay</option>
-                <option value="expired">Da het han</option>
+                <option value="all">Mọi thời hạn</option>
+                <option value="7d">Còn dưới 7 ngày</option>
+                <option value="30d">Còn dưới 30 ngày</option>
+                <option value="expired">Đã hết hạn</option>
               </select>
               <select
                 className="form-select"
                 value={advancedFilters.sort}
-                onChange={(e) => setAdvancedFilters((f) => ({ ...f, sort: e.target.value }))}
+                onChange={(event) => setAdvancedFilters((value) => ({ ...value, sort: event.target.value }))}
               >
-                <option value="newest">Moi nhat</option>
-                <option value="raised">Nhieu quyen gop nhat</option>
-                <option value="goal">Muc tieu cao nhat</option>
-                <option value="deadline">Sap het han</option>
+                <option value="newest">Mới nhất</option>
+                <option value="raised">Nhiều quyên góp nhất</option>
+                <option value="goal">Mục tiêu cao nhất</option>
+                <option value="deadline">Sắp hết hạn</option>
               </select>
             </div>
           </div>
 
-          {/* Campaign Grid */}
           {loading ? (
             <div className="loading-screen">
               <div className="spinner spinner-lg" />
@@ -233,7 +210,7 @@ export default function Home({ contractHooks, account }) {
             </div>
           ) : filtered.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-icon">🔍</div>
+              <div className="empty-state-icon">?</div>
               <p className="empty-state-title">Không tìm thấy chiến dịch</p>
               <p className="empty-state-desc">Thử thay đổi bộ lọc hoặc tạo chiến dịch mới</p>
             </div>
@@ -243,7 +220,7 @@ export default function Home({ contractHooks, account }) {
                 <CampaignCard
                   key={campaign.id}
                   campaign={campaign}
-                  onDonate={(c) => setSelectedCampaign(c)}
+                  onDonate={(item) => setSelectedCampaign(item)}
                 />
               ))}
             </div>
@@ -251,7 +228,6 @@ export default function Home({ contractHooks, account }) {
         </div>
       </section>
 
-      {/* Donation Modal */}
       {selectedCampaign && (
         <DonationModal
           campaign={selectedCampaign}

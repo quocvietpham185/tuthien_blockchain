@@ -131,6 +131,13 @@ describe("CharityDonation", function () {
       expect(campaign.donorCount).to.equal(1);
       expect(campaign.raised).to.equal(ethers.parseEther("0.3"));
     });
+
+    it("Should reject donation after goal is reached", async function () {
+      await charity.connect(user1).donate(1, "", { value: ethers.parseEther("5") });
+      await expect(
+        charity.connect(user2).donate(1, "", { value: ethers.parseEther("0.1") })
+      ).to.be.revertedWith("Campaign already reached goal");
+    });
   });
 
   describe("toggleCampaign", function () {
@@ -251,6 +258,9 @@ describe("CharityDonation", function () {
       expect(await charity.getRefundableAmount(1, user1.address)).to.equal(ethers.parseEther("1"));
       await expect(charity.connect(user1).refundDonation(1)).to.emit(charity, "DonationRefunded");
       expect(await charity.getRefundableAmount(1, user1.address)).to.equal(0);
+      await expect(charity.connect(user1).refundDonation(1)).to.be.revertedWith(
+        "No refundable donation"
+      );
 
       const campaign = await charity.getCampaign(1);
       expect(campaign.raised).to.equal(0);
