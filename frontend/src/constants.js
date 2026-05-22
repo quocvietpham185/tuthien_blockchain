@@ -32,7 +32,8 @@ export const HARDHAT_NETWORK = {
 
 // Transaction type labels
 export const TX_TYPE_LABELS = {
-  CREATE: { label: "Tạo Chiến Dịch", color: "#8b5cf6", icon: "🚀" },
+  CREATE: { label: "Tạo Chiến Dịch", color: "#2563eb", icon: "🚀" },
   DONATE: { label: "Quyên Góp", color: "#10b981", icon: "💰" },
   WITHDRAW: { label: "Rút Tiền", color: "#3b82f6", icon: "🏦" },
+  REFUND: { label: "Hoan Tien", color: "#f59e0b", icon: "↩" },
 };

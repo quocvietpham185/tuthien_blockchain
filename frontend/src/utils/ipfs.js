@@ -1,6 +1,5 @@
 import axios from "axios";
-
-const BACKEND_URL = "http://localhost:5000";
+import { BACKEND_URL } from "../constants";
 
 export const DEFAULT_CAMPAIGN_IMAGES = {
   "Giáo dục": "/campaigns/education.svg",
@@ -21,7 +20,8 @@ const SAMPLE_IPFS_IMAGES = {
 };
 
 /**
- * Upload image to mock IPFS via backend
+ * Upload image to IPFS via backend. Backend uses Pinata when PINATA_JWT is set,
+ * otherwise it falls back to local mock storage.
  * @param {File} file - Image file
  * @returns {object} { cid, url }
  */

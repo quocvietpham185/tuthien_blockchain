@@ -18,9 +18,11 @@ export default function CampaignDetail({ contractHooks, account }) {
   const [loading, setLoading] = useState(true);
   const [showDonateModal, setShowDonateModal] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
+  const [refunding, setRefunding] = useState(false);
+  const [refundableAmount, setRefundableAmount] = useState("0");
   const [activeTab, setActiveTab] = useState("info");
 
-  useEffect(() => { loadCampaign(); }, [id]);
+  useEffect(() => { loadCampaign(); }, [id, account]);
 
   const loadCampaign = async () => {
     setLoading(true);
@@ -41,6 +43,12 @@ export default function CampaignDetail({ contractHooks, account }) {
         message: don.message,
       }));
       setDonations(txFormat);
+      if (account) {
+        const amount = await contractHooks.getRefundableAmount(id, account);
+        setRefundableAmount(amount);
+      } else {
+        setRefundableAmount("0");
+      }
     } catch (err) {
       toast.error("Không tìm thấy chiến dịch: " + err.message);
       navigate("/");
@@ -63,6 +71,14 @@ export default function CampaignDetail({ contractHooks, account }) {
     if (result.success) await loadCampaign();
   };
 
+  const handleRefund = async () => {
+    if (!window.confirm("Bạn có chắc muốn nhận hoàn tiền từ chiến dịch thất bại này?")) return;
+    setRefunding(true);
+    const result = await contractHooks.refundDonation(id);
+    setRefunding(false);
+    if (result.success) await loadCampaign();
+  };
+
   if (loading) return (
     <div className="page-content">
       <div className="loading-screen" style={{ minHeight: "80vh" }}>
@@ -78,6 +94,8 @@ export default function CampaignDetail({ contractHooks, account }) {
   const timeLeft = getTimeRemaining(campaign.deadline);
   const isOwner = account?.toLowerCase() === campaign.owner.toLowerCase();
   const imageUrl = getCampaignImageUrl(campaign);
+  const goalReached = BigInt(campaign.raisedWei) >= BigInt(campaign.goalWei);
+  const hasRefund = parseFloat(refundableAmount) > 0;
 
   // Format donations for display with messages
   const donationsWithMessages = donations.map((d) => ({
@@ -290,7 +308,7 @@ export default function CampaignDetail({ contractHooks, account }) {
               )}
 
               {/* Withdraw (owner only) */}
-              {isOwner && parseFloat(campaign.raised) > 0 && !campaign.withdrawn && (
+              {isOwner && parseFloat(campaign.raised) > 0 && !campaign.withdrawn && goalReached && (
                 <>
                   <hr className="divider" />
                   <div className="alert alert-info" style={{ marginBottom: 12 }}>
@@ -303,6 +321,33 @@ export default function CampaignDetail({ contractHooks, account }) {
                     disabled={withdrawing}
                   >
                     {withdrawing ? <><span className="spinner" /> Đang rút...</> : "🏦 Rút Tiền"}
+                  </button>
+                </>
+              )}
+
+              {isOwner && parseFloat(campaign.raised) > 0 && !campaign.withdrawn && !goalReached && (
+                <>
+                  <hr className="divider" />
+                  <div className="alert alert-warning">
+                    <span>!</span>
+                    <span>Chiến dịch chưa đạt mục tiêu nên chủ chiến dịch chưa thể rút tiền.</span>
+                  </div>
+                </>
+              )}
+
+              {account && timeLeft.expired && !goalReached && !campaign.withdrawn && hasRefund && (
+                <>
+                  <hr className="divider" />
+                  <div className="alert alert-warning" style={{ marginBottom: 12 }}>
+                    <span>↩</span>
+                    <span>Chiến dịch không đạt mục tiêu. Bạn có thể nhận lại {formatEth(refundableAmount)} ETH.</span>
+                  </div>
+                  <button
+                    className="btn btn-secondary btn-full"
+                    onClick={handleRefund}
+                    disabled={refunding}
+                  >
+                    {refunding ? <><span className="spinner" /> Đang hoàn tiền...</> : "Nhận Hoàn Tiền"}
                   </button>
                 </>
               )}

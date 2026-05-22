@@ -99,6 +99,25 @@ export function useContract(signer, provider) {
     [getContract]
   );
 
+  const refundDonation = useCallback(
+    async (campaignId) => {
+      const contract = getContract(true);
+      const toastId = toast.loading("Dang yeu cau hoan tien...");
+      try {
+        const tx = await contract.refundDonation(campaignId);
+        toast.loading("Dang cho xac nhan transaction...", { id: toastId });
+        const receipt = await tx.wait();
+        toast.success("Da hoan tien thanh cong", { id: toastId });
+        return { success: true, txHash: receipt.hash, receipt };
+      } catch (error) {
+        const msg = error.reason || error.message || "Transaction failed";
+        toast.error("Loi hoan tien: " + msg, { id: toastId });
+        return { success: false, error: msg };
+      }
+    },
+    [getContract]
+  );
+
   const toggleCampaign = useCallback(
     async (campaignId) => {
       const contract = getContract(true);
@@ -190,6 +209,40 @@ export function useContract(signer, provider) {
     return contract.platformOwner();
   }, [getContract]);
 
+  const getPlatformFee = useCallback(async () => {
+    const contract = getContract(false);
+    return (await contract.platformFee()).toString();
+  }, [getContract]);
+
+  const setPlatformFee = useCallback(
+    async (feeBasisPoints) => {
+      const contract = getContract(true);
+      const toastId = toast.loading("Dang cap nhat platform fee...");
+      try {
+        const tx = await contract.setPlatformFee(feeBasisPoints);
+        toast.loading("Dang cho xac nhan transaction...", { id: toastId });
+        const receipt = await tx.wait();
+        toast.success("Da cap nhat platform fee", { id: toastId });
+        return { success: true, txHash: receipt.hash, receipt };
+      } catch (error) {
+        const msg = error.reason || error.message || "Transaction failed";
+        toast.error("Loi cap nhat fee: " + msg, { id: toastId });
+        return { success: false, error: msg };
+      }
+    },
+    [getContract]
+  );
+
+  const getRefundableAmount = useCallback(
+    async (campaignId, userAddress) => {
+      if (!userAddress) return "0";
+      const contract = getContract(false);
+      const amount = await contract.getRefundableAmount(campaignId, userAddress);
+      return ethers.formatEther(amount);
+    },
+    [getContract]
+  );
+
   /**
    * Get contract address
    */
@@ -205,6 +258,7 @@ export function useContract(signer, provider) {
     createCampaign,
     donate,
     withdrawFunds,
+    refundDonation,
     toggleCampaign,
     getCampaigns,
     getCampaign,
@@ -213,6 +267,9 @@ export function useContract(signer, provider) {
     getAllTransactions,
     getPlatformStats,
     getPlatformOwner,
+    getPlatformFee,
+    setPlatformFee,
+    getRefundableAmount,
     getContractAddress,
   };
 }

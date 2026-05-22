@@ -9,6 +9,9 @@ export default function Admin({ contractHooks, account, authToken }) {
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
+  const [platformFee, setPlatformFeeValue] = useState("0");
+  const [feeInput, setFeeInput] = useState("0");
+  const [savingFee, setSavingFee] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -17,12 +20,15 @@ export default function Admin({ contractHooks, account, authToken }) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [platformOwner, allCampaigns] = await Promise.all([
+      const [platformOwner, allCampaigns, currentFee] = await Promise.all([
         contractHooks.getPlatformOwner(),
         contractHooks.getCampaigns(),
+        contractHooks.getPlatformFee(),
       ]);
       setOwner(platformOwner);
       setCampaigns([...allCampaigns].reverse());
+      setPlatformFeeValue(currentFee);
+      setFeeInput(currentFee);
 
       if (authToken) {
         const response = await fetch(`${BACKEND_URL}/api/admin/overview`, {
@@ -48,6 +54,20 @@ export default function Admin({ contractHooks, account, authToken }) {
     setBusyId(campaignId);
     const result = await contractHooks.toggleCampaign(campaignId);
     setBusyId(null);
+    if (result.success) await loadData();
+  };
+
+  const savePlatformFee = async (event) => {
+    event.preventDefault();
+    const nextFee = Number(feeInput);
+    if (!Number.isInteger(nextFee) || nextFee < 0 || nextFee > 1000) {
+      toast.error("Platform fee phai tu 0 den 1000 basis points");
+      return;
+    }
+
+    setSavingFee(true);
+    const result = await contractHooks.setPlatformFee(nextFee);
+    setSavingFee(false);
     if (result.success) await loadData();
   };
 
@@ -157,6 +177,28 @@ export default function Admin({ contractHooks, account, authToken }) {
               </div>
 
               <div className="card">
+                <h2 className="section-title" style={{ fontSize: 18, marginBottom: 16 }}>
+                  Cau hinh smart contract
+                </h2>
+                <form onSubmit={savePlatformFee} className="form-group" style={{ marginBottom: 28 }}>
+                  <label className="form-label">Platform fee (basis points)</label>
+                  <input
+                    className="form-input"
+                    type="number"
+                    min="0"
+                    max="1000"
+                    step="1"
+                    value={feeInput}
+                    onChange={(event) => setFeeInput(event.target.value)}
+                  />
+                  <span className="form-hint">
+                    Hien tai: {platformFee} bps ({(Number(platformFee) / 100).toFixed(2)}%). Toi da 1000 bps.
+                  </span>
+                  <button className="btn btn-primary btn-sm" type="submit" disabled={savingFee}>
+                    {savingFee ? "Dang luu..." : "Luu platform fee"}
+                  </button>
+                </form>
+
                 <h2 className="section-title" style={{ fontSize: 18, marginBottom: 16 }}>
                   Top chien dich
                 </h2>

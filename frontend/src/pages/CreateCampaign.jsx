@@ -100,8 +100,8 @@ export default function CreateCampaign({ contractHooks, account }) {
         <div className="container" style={{ paddingTop: 60 }}>
           <div className="card" style={{ maxWidth: 480, margin: "0 auto", textAlign: "center" }}>
             <div style={{ fontSize: 64, marginBottom: 16 }}>🦊</div>
-            <h2 style={{ color: "#f1f5f9", marginBottom: 8 }}>Kết Nối Ví Để Tiếp Tục</h2>
-            <p style={{ color: "#64748b", marginBottom: 24 }}>
+            <h2 style={{ color: "#111827", marginBottom: 8 }}>Kết Nối Ví Để Tiếp Tục</h2>
+            <p style={{ color: "#6b7280", marginBottom: 24 }}>
               Bạn cần kết nối ví MetaMask để tạo chiến dịch từ thiện
             </p>
           </div>
@@ -172,7 +172,7 @@ export default function CreateCampaign({ contractHooks, account }) {
                   style={{ display: "none" }}
                 />
                 {imageFile && (
-                  <p className="form-hint" style={{ color: "#34d399" }}>
+                  <p className="form-hint" style={{ color: "#047857" }}>
                     ✅ {imageFile.name} ({(imageFile.size / 1024).toFixed(1)} KB)
                   </p>
                 )}
@@ -224,7 +224,7 @@ export default function CreateCampaign({ contractHooks, account }) {
                 <div className="form-group">
                   <label className="form-label">Mục tiêu (ETH) *</label>
                   <div style={{ position: "relative" }}>
-                    <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#8b5cf6", fontSize: 18 }}>⬡</span>
+                    <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#2563eb", fontSize: 18 }}>⬡</span>
                     <input
                       type="number"
                       name="goal"
@@ -288,7 +288,7 @@ export default function CreateCampaign({ contractHooks, account }) {
           {/* Preview */}
           <div className="create-preview">
             <div className="card">
-              <h3 style={{ color: "#f1f5f9", marginBottom: 16, fontSize: 16, fontWeight: 700 }}>
+              <h3 style={{ color: "#111827", marginBottom: 16, fontSize: 16, fontWeight: 700 }}>
                 👁️ Xem trước
               </h3>
               <div className="preview-image">
@@ -299,16 +299,16 @@ export default function CreateCampaign({ contractHooks, account }) {
                 )}
               </div>
               <div style={{ marginTop: 16 }}>
-                <h4 style={{ color: "#f1f5f9", fontWeight: 700 }}>{form.title || "Tên chiến dịch..."}</h4>
-                <p style={{ color: "#64748b", fontSize: 13, marginTop: 8 }}>
+                <h4 style={{ color: "#111827", fontWeight: 700 }}>{form.title || "Tên chiến dịch..."}</h4>
+                <p style={{ color: "#6b7280", fontSize: 13, marginTop: 8 }}>
                   {form.description.substring(0, 100) || "Mô tả chiến dịch..."}
                 </p>
                 {form.goal && (
-                  <div style={{ marginTop: 12, color: "#a78bfa", fontWeight: 800, fontSize: 18 }}>
+                  <div style={{ marginTop: 12, color: "#111827", fontWeight: 800, fontSize: 18 }}>
                     ⬡ Mục tiêu: {form.goal} ETH
                   </div>
                 )}
-                <div style={{ marginTop: 8, color: "#64748b", fontSize: 12 }}>
+                <div style={{ marginTop: 8, color: "#6b7280", fontSize: 12 }}>
                   ⏰ Thời hạn: {form.durationDays} ngày
                 </div>
               </div>
@@ -316,7 +316,7 @@ export default function CreateCampaign({ contractHooks, account }) {
 
             {/* Info */}
             <div className="card" style={{ marginTop: 16 }}>
-              <h3 style={{ color: "#f1f5f9", marginBottom: 12, fontSize: 14, fontWeight: 700 }}>
+              <h3 style={{ color: "#111827", marginBottom: 12, fontSize: 14, fontWeight: 700 }}>
                 ⛓️ Quy trình
               </h3>
               <div className="process-steps">

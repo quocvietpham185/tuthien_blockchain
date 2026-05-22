@@ -1,5 +1,6 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
+const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
 describe("CharityDonation", function () {
   let charity;
@@ -19,6 +20,29 @@ describe("CharityDonation", function () {
 
     it("Should start with 0 campaigns", async function () {
       expect(await charity.campaignCount()).to.equal(0);
+    });
+
+    it("Should start with 0 platform fee", async function () {
+      expect(await charity.platformFee()).to.equal(0);
+    });
+  });
+
+  describe("platform fee config", function () {
+    it("Should allow platform owner to update fee", async function () {
+      await expect(charity.setPlatformFee(250))
+        .to.emit(charity, "PlatformFeeUpdated")
+        .withArgs(0, 250, anyValue);
+      expect(await charity.platformFee()).to.equal(250);
+    });
+
+    it("Should reject non-owner fee update", async function () {
+      await expect(charity.connect(user1).setPlatformFee(100)).to.be.revertedWith(
+        "Not platform owner"
+      );
+    });
+
+    it("Should cap platform fee", async function () {
+      await expect(charity.setPlatformFee(1001)).to.be.revertedWith("Fee too high");
     });
   });
 
@@ -147,7 +171,7 @@ describe("CharityDonation", function () {
         "Desc",
         "Education",
         "QmHash",
-        ethers.parseEther("5"),
+        ethers.parseEther("1"),
         30
       );
       await charity.connect(user1).donate(1, "donation", { value: ethers.parseEther("1") });
@@ -173,6 +197,73 @@ describe("CharityDonation", function () {
 
     it("Should emit FundsWithdrawn event", async function () {
       await expect(charity.withdrawFunds(1)).to.emit(charity, "FundsWithdrawn");
+    });
+
+    it("Should reject withdrawal before goal is reached", async function () {
+      await charity.createCampaign(
+        "Large Campaign",
+        "Desc",
+        "Education",
+        "QmHash",
+        ethers.parseEther("5"),
+        30
+      );
+      await charity.connect(user1).donate(2, "donation", { value: ethers.parseEther("1") });
+
+      await expect(charity.withdrawFunds(2)).to.be.revertedWith("Goal not reached");
+    });
+
+    it("Should send configured platform fee on withdrawal", async function () {
+      await charity.setPlatformFee(500); // 5%
+      const contractBalanceBefore = await ethers.provider.getBalance(await charity.getAddress());
+
+      await charity.withdrawFunds(1);
+
+      const contractBalanceAfter = await ethers.provider.getBalance(await charity.getAddress());
+      expect(contractBalanceBefore).to.equal(ethers.parseEther("1"));
+      expect(contractBalanceAfter).to.equal(0);
+    });
+  });
+
+  describe("refundDonation", function () {
+    beforeEach(async function () {
+      await charity.createCampaign(
+        "Failed Campaign",
+        "Desc",
+        "Education",
+        "QmHash",
+        ethers.parseEther("5"),
+        1
+      );
+      await charity.connect(user1).donate(1, "donation", { value: ethers.parseEther("1") });
+    });
+
+    it("Should reject refund before campaign expires", async function () {
+      await expect(charity.connect(user1).refundDonation(1)).to.be.revertedWith(
+        "Campaign has not expired"
+      );
+    });
+
+    it("Should refund donor after failed campaign expires", async function () {
+      await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60]);
+      await ethers.provider.send("evm_mine");
+
+      expect(await charity.getRefundableAmount(1, user1.address)).to.equal(ethers.parseEther("1"));
+      await expect(charity.connect(user1).refundDonation(1)).to.emit(charity, "DonationRefunded");
+      expect(await charity.getRefundableAmount(1, user1.address)).to.equal(0);
+
+      const campaign = await charity.getCampaign(1);
+      expect(campaign.raised).to.equal(0);
+    });
+
+    it("Should reject refund if campaign reached goal", async function () {
+      await charity.connect(user2).donate(1, "donation", { value: ethers.parseEther("4") });
+      await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60]);
+      await ethers.provider.send("evm_mine");
+
+      await expect(charity.connect(user1).refundDonation(1)).to.be.revertedWith(
+        "Campaign reached goal"
+      );
     });
   });
 

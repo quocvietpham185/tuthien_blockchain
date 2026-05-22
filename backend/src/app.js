@@ -37,6 +37,14 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 app.use("/ipfs", express.static(uploadsDir));
+app.get("/ipfs/:cid", (req, res) => {
+  const ipfsService = require("./services/ipfsService");
+  const url = ipfsService.getIPFSUrl(req.params.cid);
+  if (url.startsWith("http://localhost") || url.startsWith("http://127.0.0.1")) {
+    return res.status(404).json({ success: false, error: "Local IPFS file not found" });
+  }
+  return res.redirect(url);
+});
 
 // ==================== ROUTES ====================
 app.use("/api/campaigns", campaignsRouter);
@@ -92,7 +100,7 @@ app.listen(PORT, async () => {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log(`🌐 Server:     http://localhost:${PORT}`);
   console.log(`📡 Blockchain: ${process.env.HARDHAT_RPC_URL || "http://127.0.0.1:8545"}`);
-  console.log(`📁 IPFS:       Mock (local storage at ./uploads)`);
+  console.log(`📁 IPFS:       ${process.env.PINATA_JWT ? "Pinata" : "Mock (local storage at ./uploads)"}`);
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
   // Initialize blockchain listener

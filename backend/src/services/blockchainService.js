@@ -83,7 +83,7 @@ function setupEventListeners() {
     });
   });
 
-  contract.on("FundsWithdrawn", (campaignId, owner, amount, timestamp, event) => {
+  contract.on("FundsWithdrawn", (campaignId, owner, amount, platformFeeAmount, timestamp, event) => {
     console.log(
       `🏦 [EVENT] FundsWithdrawn: ${ethers.formatEther(amount)} ETH from Campaign #${campaignId}`
     );
@@ -91,6 +91,20 @@ function setupEventListeners() {
       campaignId: campaignId.toString(),
       owner,
       actor: owner,
+      amount: ethers.formatEther(amount),
+      platformFeeAmount: ethers.formatEther(platformFeeAmount),
+      txHash: event?.log?.transactionHash || event?.transactionHash,
+    });
+  });
+
+  contract.on("DonationRefunded", (campaignId, donor, amount, timestamp, event) => {
+    console.log(
+      `[EVENT] DonationRefunded: ${ethers.formatEther(amount)} ETH from Campaign #${campaignId}`
+    );
+    notificationService.addNotification("DONATION_REFUNDED", {
+      campaignId: campaignId.toString(),
+      donor,
+      actor: donor,
       amount: ethers.formatEther(amount),
       txHash: event?.log?.transactionHash || event?.transactionHash,
     });
@@ -254,10 +268,11 @@ async function getRecentEvents(fromBlock = 0) {
   const currentBlock = await provider.getBlockNumber();
   const startBlock = Math.max(0, fromBlock || currentBlock - 1000);
 
-  const [createdEvents, donationEvents, withdrawEvents] = await Promise.all([
+  const [createdEvents, donationEvents, withdrawEvents, refundEvents] = await Promise.all([
     contract.queryFilter(contract.filters.CampaignCreated(), startBlock),
     contract.queryFilter(contract.filters.DonationReceived(), startBlock),
     contract.queryFilter(contract.filters.FundsWithdrawn(), startBlock),
+    contract.queryFilter(contract.filters.DonationRefunded(), startBlock),
   ]);
 
   const allEvents = [
@@ -283,6 +298,16 @@ async function getRecentEvents(fromBlock = 0) {
     })),
     ...withdrawEvents.map((e) => ({
       type: "FundsWithdrawn",
+      txHash: e.transactionHash,
+      blockNumber: e.blockNumber,
+      campaignId: e.args[0].toString(),
+      actor: e.args[1],
+      amount: ethers.formatEther(e.args[2]),
+      platformFeeAmount: ethers.formatEther(e.args[3]),
+      timestamp: e.args[4].toString(),
+    })),
+    ...refundEvents.map((e) => ({
+      type: "DonationRefunded",
       txHash: e.transactionHash,
       blockNumber: e.blockNumber,
       campaignId: e.args[0].toString(),

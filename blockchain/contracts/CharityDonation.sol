@@ -36,7 +36,7 @@ contract CharityDonation is ReentrancyGuard {
     }
 
     struct TransactionRecord {
-        string txType;         // "DONATE", "CREATE", "WITHDRAW"
+        string txType;         // "DONATE", "CREATE", "WITHDRAW", "REFUND"
         uint256 campaignId;
         address actor;
         uint256 amount;
@@ -50,13 +50,15 @@ contract CharityDonation is ReentrancyGuard {
     address public platformOwner;
     uint256 public totalDonations;      // Total ETH donated (wei)
     uint256 public totalCampaigns;      // Alias for campaignCount
-    uint256 public constant PLATFORM_FEE = 0; // 0% fee for transparency demo
+    uint256 public platformFee;         // Platform fee in basis points, 100 = 1%
+    uint256 public constant MAX_PLATFORM_FEE = 1000; // Max 10%
 
     mapping(uint256 => Campaign) public campaigns;
     mapping(uint256 => Donation[]) public campaignDonations;
     mapping(address => Donation[]) public userDonations;
     mapping(address => uint256[]) public userCreatedCampaigns;
     mapping(uint256 => mapping(address => bool)) public campaignDonorHasDonated;
+    mapping(uint256 => mapping(address => uint256)) public campaignDonorAmounts;
     TransactionRecord[] public allTransactions;
 
     // ==================== EVENTS ====================
@@ -85,12 +87,26 @@ contract CharityDonation is ReentrancyGuard {
         uint256 indexed campaignId,
         address indexed owner,
         uint256 amount,
+        uint256 platformFeeAmount,
+        uint256 timestamp
+    );
+
+    event DonationRefunded(
+        uint256 indexed campaignId,
+        address indexed donor,
+        uint256 amount,
         uint256 timestamp
     );
 
     event CampaignStatusChanged(
         uint256 indexed campaignId,
         bool active,
+        uint256 timestamp
+    );
+
+    event PlatformFeeUpdated(
+        uint256 oldFee,
+        uint256 newFee,
         uint256 timestamp
     );
 
@@ -111,6 +127,11 @@ contract CharityDonation is ReentrancyGuard {
             campaigns[_id].owner == msg.sender || platformOwner == msg.sender,
             "Not authorized"
         );
+        _;
+    }
+
+    modifier onlyPlatformOwner() {
+        require(platformOwner == msg.sender, "Not platform owner");
         _;
     }
 
@@ -232,6 +253,7 @@ contract CharityDonation is ReentrancyGuard {
 
         campaignDonations[_campaignId].push(newDonation);
         userDonations[msg.sender].push(newDonation);
+        campaignDonorAmounts[_campaignId][msg.sender] += msg.value;
 
         // Record transaction
         allTransactions.push(TransactionRecord({
@@ -266,8 +288,11 @@ contract CharityDonation is ReentrancyGuard {
         Campaign storage campaign = campaigns[_campaignId];
         require(campaign.raised > 0, "No funds to withdraw");
         require(!campaign.withdrawn, "Funds already withdrawn");
+        require(campaign.raised >= campaign.goal, "Goal not reached");
 
         uint256 amount = campaign.raised;
+        uint256 feeAmount = (amount * platformFee) / 10000;
+        uint256 ownerAmount = amount - feeAmount;
         campaign.withdrawn = true;
         campaign.active = false;
 
@@ -276,17 +301,65 @@ contract CharityDonation is ReentrancyGuard {
             txType: "WITHDRAW",
             campaignId: _campaignId,
             actor: msg.sender,
+            amount: ownerAmount,
+            timestamp: block.timestamp,
+            campaignTitle: campaign.title
+        }));
+
+        if (feeAmount > 0) {
+            (bool feeSuccess, ) = payable(platformOwner).call{value: feeAmount}("");
+            require(feeSuccess, "Fee transfer failed");
+        }
+
+        (bool success, ) = campaign.owner.call{value: ownerAmount}("");
+        require(success, "Transfer failed");
+
+        emit FundsWithdrawn(_campaignId, msg.sender, ownerAmount, feeAmount, block.timestamp);
+        emit CampaignStatusChanged(_campaignId, false, block.timestamp);
+    }
+
+    /**
+     * @dev Refund donor if campaign expired without reaching its goal.
+     */
+    function refundDonation(uint256 _campaignId)
+        external
+        campaignExists(_campaignId)
+        nonReentrant
+    {
+        Campaign storage campaign = campaigns[_campaignId];
+        require(block.timestamp > campaign.deadline, "Campaign has not expired");
+        require(campaign.raised < campaign.goal, "Campaign reached goal");
+        require(!campaign.withdrawn, "Funds already withdrawn");
+
+        uint256 amount = campaignDonorAmounts[_campaignId][msg.sender];
+        require(amount > 0, "No refundable donation");
+
+        campaignDonorAmounts[_campaignId][msg.sender] = 0;
+        campaign.raised -= amount;
+
+        allTransactions.push(TransactionRecord({
+            txType: "REFUND",
+            campaignId: _campaignId,
+            actor: msg.sender,
             amount: amount,
             timestamp: block.timestamp,
             campaignTitle: campaign.title
         }));
 
-        // Transfer funds to campaign owner
-        (bool success, ) = campaign.owner.call{value: amount}("");
-        require(success, "Transfer failed");
+        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        require(success, "Refund failed");
 
-        emit FundsWithdrawn(_campaignId, msg.sender, amount, block.timestamp);
-        emit CampaignStatusChanged(_campaignId, false, block.timestamp);
+        emit DonationRefunded(_campaignId, msg.sender, amount, block.timestamp);
+    }
+
+    /**
+     * @dev Update platform fee. Fee is stored in basis points: 100 = 1%.
+     */
+    function setPlatformFee(uint256 _platformFee) external onlyPlatformOwner {
+        require(_platformFee <= MAX_PLATFORM_FEE, "Fee too high");
+        uint256 oldFee = platformFee;
+        platformFee = _platformFee;
+        emit PlatformFeeUpdated(oldFee, _platformFee, block.timestamp);
     }
 
     /**
@@ -360,6 +433,26 @@ contract CharityDonation is ReentrancyGuard {
         returns (uint256[] memory)
     {
         return userCreatedCampaigns[_user];
+    }
+
+    /**
+     * @dev Get currently refundable amount for a donor.
+     */
+    function getRefundableAmount(uint256 _campaignId, address _donor)
+        external
+        view
+        campaignExists(_campaignId)
+        returns (uint256)
+    {
+        Campaign storage campaign = campaigns[_campaignId];
+        if (
+            block.timestamp <= campaign.deadline ||
+            campaign.raised >= campaign.goal ||
+            campaign.withdrawn
+        ) {
+            return 0;
+        }
+        return campaignDonorAmounts[_campaignId][_donor];
     }
 
     /**

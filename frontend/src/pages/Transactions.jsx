@@ -79,22 +79,22 @@ export default function Transactions({ contractHooks }) {
         {!loading && (
           <div className="grid-stats" style={{ marginBottom: 32 }}>
             <div className="stat-card">
-              <div className="stat-icon" style={{ background: "rgba(139, 92, 246, 0.15)" }}>📋</div>
+              <div className="stat-icon" style={{ background: "#eef2ff" }}>📋</div>
               <div className="stat-value">{transactions.length}</div>
               <div className="stat-label">Tổng giao dịch</div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon" style={{ background: "rgba(16, 185, 129, 0.15)" }}>💰</div>
+              <div className="stat-icon" style={{ background: "#ecfdf5" }}>💰</div>
               <div className="stat-value">{summary.donations}</div>
               <div className="stat-label">Lần quyên góp</div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon" style={{ background: "rgba(59, 130, 246, 0.15)" }}>🚀</div>
+              <div className="stat-icon" style={{ background: "#eff6ff" }}>🚀</div>
               <div className="stat-value">{summary.creates}</div>
               <div className="stat-label">Chiến dịch tạo</div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon" style={{ background: "rgba(251, 191, 36, 0.15)" }}>⬡</div>
+              <div className="stat-icon" style={{ background: "#fffbeb" }}>⬡</div>
               <div className="stat-value">{summary.totalEth.toFixed(3)}</div>
               <div className="stat-label">ETH đã lưu thông</div>
             </div>
@@ -133,7 +133,7 @@ export default function Transactions({ contractHooks }) {
 
         {/* Blockchain Info */}
         <div className="card" style={{ marginTop: 24 }}>
-          <h3 style={{ color: "#f1f5f9", marginBottom: 20, fontWeight: 700 }}>⛓️ Thông Tin Blockchain</h3>
+          <h3 style={{ color: "#111827", marginBottom: 20, fontWeight: 700 }}>⛓️ Thông Tin Blockchain</h3>
           <div className="blockchain-info">
             <div className="blockchain-row">
               <span className="blockchain-label">Chuẩn Blockchain</span>

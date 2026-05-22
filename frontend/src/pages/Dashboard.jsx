@@ -74,8 +74,8 @@ export default function Dashboard({ contractHooks, account, authToken }) {
         <div className="container" style={{ paddingTop: 60 }}>
           <div className="card" style={{ maxWidth: 480, margin: "0 auto", textAlign: "center" }}>
             <div style={{ fontSize: 64, marginBottom: 16 }}>🦊</div>
-            <h2 style={{ color: "#f1f5f9", marginBottom: 8 }}>Kết Nối Ví</h2>
-            <p style={{ color: "#64748b" }}>Kết nối MetaMask để xem dashboard</p>
+            <h2 style={{ color: "#111827", marginBottom: 8 }}>Kết Nối Ví</h2>
+            <p style={{ color: "#6b7280" }}>Kết nối MetaMask để xem dashboard</p>
           </div>
         </div>
       </div>
@@ -98,7 +98,7 @@ export default function Dashboard({ contractHooks, account, authToken }) {
               >
                 {formatAddress(account)}
               </button>
-              <span style={{ color: "#64748b", fontSize: 13 }}>Hardhat Local Network</span>
+              <span style={{ color: "#6b7280", fontSize: 13 }}>Hardhat Local Network</span>
             </div>
           </div>
           <button
@@ -113,22 +113,22 @@ export default function Dashboard({ contractHooks, account, authToken }) {
         {!loading && (
           <div className="grid-stats" style={{ marginBottom: 40 }}>
             <div className="stat-card">
-              <div className="stat-icon" style={{ background: "rgba(139, 92, 246, 0.15)" }}>💰</div>
+              <div className="stat-icon" style={{ background: "#eef2ff" }}>💰</div>
               <div className="stat-value">{stats.donated}</div>
               <div className="stat-label">ETH đã quyên góp</div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon" style={{ background: "rgba(59, 130, 246, 0.15)" }}>🎯</div>
+              <div className="stat-icon" style={{ background: "#eff6ff" }}>🎯</div>
               <div className="stat-value">{stats.created}</div>
               <div className="stat-label">Chiến dịch đã tạo</div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon" style={{ background: "rgba(16, 185, 129, 0.15)" }}>💝</div>
+              <div className="stat-icon" style={{ background: "#ecfdf5" }}>💝</div>
               <div className="stat-value">{stats.total}</div>
               <div className="stat-label">Lần quyên góp</div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon" style={{ background: "rgba(251, 191, 36, 0.15)" }}>⛓️</div>
+              <div className="stat-icon" style={{ background: "#fffbeb" }}>⛓️</div>
               <div className="stat-value" style={{ fontSize: 16 }}>31337</div>
               <div className="stat-label">Chain ID (Hardhat)</div>
             </div>
