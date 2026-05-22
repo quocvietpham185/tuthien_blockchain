@@ -119,6 +119,30 @@
 .stat-lbl { font-size: 11px; color: #6b7280; }
 .text-red { color: #dc2626; }
 
+.campaign-status-note {
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #4b5563;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.campaign-status-goalReached,
+.campaign-status-completed {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #047857;
+}
+
+.campaign-status-failed,
+.campaign-status-paused {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
 /* ---- Owner ---- */
 .campaign-owner {
   display: flex;

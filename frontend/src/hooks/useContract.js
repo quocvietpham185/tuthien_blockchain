@@ -143,8 +143,11 @@ export function useContract(signer, provider) {
    */
   const getCampaigns = useCallback(async () => {
     const contract = getContract(false);
-    const campaigns = await contract.getCampaigns();
-    return campaigns.map(formatCampaign);
+    const [campaigns, chainNow] = await Promise.all([
+      contract.getCampaigns(),
+      getChainTimestamp(contract),
+    ]);
+    return campaigns.map((campaign) => formatCampaign(campaign, chainNow));
   }, [getContract]);
 
   /**
@@ -153,8 +156,11 @@ export function useContract(signer, provider) {
   const getCampaign = useCallback(
     async (campaignId) => {
       const contract = getContract(false);
-      const campaign = await contract.getCampaign(campaignId);
-      return formatCampaign(campaign);
+      const [campaign, chainNow] = await Promise.all([
+        contract.getCampaign(campaignId),
+        getChainTimestamp(contract),
+      ]);
+      return formatCampaign(campaign, chainNow);
     },
     [getContract]
   );
@@ -277,10 +283,20 @@ export function useContract(signer, provider) {
 
 // ---- Formatters ----
 
-function formatCampaign(c) {
+async function getChainTimestamp(contract) {
+  try {
+    const block = await contract.runner.provider.getBlock("latest");
+    return Number(block.timestamp);
+  } catch {
+    return Math.floor(Date.now() / 1000);
+  }
+}
+
+function formatCampaign(c, chainNow = Math.floor(Date.now() / 1000)) {
   const goal = BigInt(c.goal);
   const raised = BigInt(c.raised);
   const progress = goal > 0n ? Math.min(100, Math.round((Number(raised) * 100) / Number(goal))) : 0;
+  const deadline = Number(c.deadline);
 
   return {
     id: c.id.toString(),
@@ -293,7 +309,9 @@ function formatCampaign(c) {
     goalWei: c.goal.toString(),
     raised: ethers.formatEther(c.raised),
     raisedWei: c.raised.toString(),
-    deadline: Number(c.deadline),
+    deadline,
+    chainNow,
+    expired: chainNow > deadline,
     donorCount: c.donorCount.toString(),
     active: c.active,
     withdrawn: c.withdrawn,

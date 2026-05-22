@@ -108,8 +108,8 @@ async function main() {
   console.log("\n🎉 Deployment complete!");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log("Contract Address:", contractAddress);
-  console.log("Network:         Hardhat Local (localhost:8545)");
-  console.log("Chain ID:        31337");
+  console.log("Network:        ", hre.network.name);
+  console.log("Chain ID:       ", deploymentInfo.chainId);
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 }
 

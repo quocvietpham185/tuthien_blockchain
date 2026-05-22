@@ -1,12 +1,16 @@
-﻿import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import CampaignCard from "../components/CampaignCard/CampaignCard";
 import DonationModal from "../components/DonationModal/DonationModal";
+import { useNavigate } from "react-router-dom";
 import { CATEGORIES } from "../constants";
+import { formatAddress, formatDate, formatEth, getCampaignStatus } from "../utils/format";
 
 export default function Home({ contractHooks, account }) {
+  const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
+  const [transactions, setTransactions] = useState([]);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [filter, setFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -25,12 +29,14 @@ export default function Home({ contractHooks, account }) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [campaignList, platformStats] = await Promise.all([
+      const [campaignList, platformStats, txList] = await Promise.all([
         contractHooks.getCampaigns(),
         contractHooks.getPlatformStats(),
+        contractHooks.getAllTransactions(),
       ]);
       setCampaigns([...campaignList].reverse());
       setStats(platformStats);
+      setTransactions(txList);
     } catch (error) {
       console.error("Load error:", error);
     } finally {
@@ -46,6 +52,45 @@ export default function Home({ contractHooks, account }) {
   };
 
   const now = Math.floor(Date.now() / 1000);
+  const community = useMemo(() => {
+    const donorTotals = new Map();
+    const categoryTotals = new Map();
+
+    transactions
+      .filter((tx) => tx.txType === "DONATE")
+      .forEach((tx) => {
+        donorTotals.set(tx.actor, (donorTotals.get(tx.actor) || 0) + Number(tx.amount || 0));
+      });
+
+    campaigns.forEach((campaign) => {
+      categoryTotals.set(
+        campaign.category,
+        (categoryTotals.get(campaign.category) || 0) + Number(campaign.raised || 0)
+      );
+    });
+
+    return {
+      topCampaigns: [...campaigns]
+        .sort((a, b) => Number(b.raised) - Number(a.raised))
+        .slice(0, 5),
+      topDonors: [...donorTotals.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([address, amount]) => ({ address, amount })),
+      categoryStats: [...categoryTotals.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([category, amount]) => ({ category, amount })),
+      urgentCampaigns: campaigns
+        .filter((campaign) => {
+          const status = getCampaignStatus(campaign);
+          return status.key === "active" && Number(campaign.deadline) <= now + 7 * 86400;
+        })
+        .sort((a, b) => Number(a.deadline) - Number(b.deadline))
+        .slice(0, 3),
+    };
+  }, [campaigns, transactions, now]);
+
   const filtered = campaigns
     .filter((campaign) => {
       if (filter === "active" && (!campaign.active || Number(campaign.deadline) < now)) return false;
@@ -101,6 +146,82 @@ export default function Home({ contractHooks, account }) {
               </div>
             )}
           </div>
+        </div>
+      </section>
+
+      <section className="community-insights">
+        <div className="container">
+          <div className="section-header">
+            <div>
+              <h2 className="section-title">Thống Kê Cộng Đồng</h2>
+              <p className="section-subtitle">Leaderboard được tổng hợp trực tiếp từ dữ liệu on-chain</p>
+            </div>
+          </div>
+
+          <div className="insights-grid">
+            <div className="insight-panel">
+              <h3>Top chiến dịch</h3>
+              <div className="insight-list">
+                {community.topCampaigns.length === 0 ? (
+                  <p className="muted-line">Chưa có dữ liệu</p>
+                ) : (
+                  community.topCampaigns.map((campaign) => (
+                    <button
+                      key={campaign.id}
+                      className="insight-row"
+                      onClick={() => navigate(`/campaign/${campaign.id}`)}
+                    >
+                      <span>#{campaign.id} {campaign.title}</span>
+                      <strong>{formatEth(campaign.raised)} ETH</strong>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="insight-panel">
+              <h3>Top donor</h3>
+              <div className="insight-list">
+                {community.topDonors.length === 0 ? (
+                  <p className="muted-line">Chưa có giao dịch quyên góp</p>
+                ) : (
+                  community.topDonors.map((donor) => (
+                    <div key={donor.address} className="insight-row">
+                      <span className="address">{formatAddress(donor.address)}</span>
+                      <strong>{formatEth(donor.amount)} ETH</strong>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="insight-panel">
+              <h3>Theo danh mục</h3>
+              <div className="insight-list">
+                {community.categoryStats.length === 0 ? (
+                  <p className="muted-line">Chưa có danh mục nào</p>
+                ) : (
+                  community.categoryStats.map((item) => (
+                    <div key={item.category} className="insight-row">
+                      <span>{item.category}</span>
+                      <strong>{formatEth(item.amount)} ETH</strong>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {community.urgentCampaigns.length > 0 && (
+            <div className="status-strip">
+              <strong>Cần chú ý:</strong>
+              <span>
+                {community.urgentCampaigns
+                  .map((campaign) => `#${campaign.id} hết hạn ${formatDate(campaign.deadline)}`)
+                  .join(" · ")}
+              </span>
+            </div>
+          )}
         </div>
       </section>
 

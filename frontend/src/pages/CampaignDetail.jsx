@@ -15,6 +15,7 @@ export default function CampaignDetail({ contractHooks, account }) {
   const navigate = useNavigate();
   const [campaign, setCampaign] = useState(null);
   const [donations, setDonations] = useState([]);
+  const [campaignTransactions, setCampaignTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showDonateModal, setShowDonateModal] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
@@ -28,9 +29,10 @@ export default function CampaignDetail({ contractHooks, account }) {
   const loadCampaign = async () => {
     setLoading(true);
     try {
-      const [c, d] = await Promise.all([
+      const [c, d, allTx] = await Promise.all([
         contractHooks.getCampaign(id),
         contractHooks.getCampaignDonations(id),
+        contractHooks.getAllTransactions(),
       ]);
       setCampaign(c);
       setPlatformFee(await contractHooks.getPlatformFee());
@@ -45,6 +47,7 @@ export default function CampaignDetail({ contractHooks, account }) {
         message: don.message,
       }));
       setDonations(txFormat);
+      setCampaignTransactions(allTx.filter((tx) => tx.campaignId === id));
       if (account) {
         const amount = await contractHooks.getRefundableAmount(id, account);
         setRefundableAmount(amount);
@@ -101,6 +104,14 @@ export default function CampaignDetail({ contractHooks, account }) {
   const feeRate = Number(platformFee) / 10000;
   const platformFeeAmount = parseFloat(campaign.raised || 0) * feeRate;
   const ownerReceives = Math.max(0, parseFloat(campaign.raised || 0) - platformFeeAmount);
+  const totalRefunded = campaignTransactions
+    .filter((tx) => tx.txType === "REFUND")
+    .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+  const totalWithdrawn = campaignTransactions
+    .filter((tx) => tx.txType === "WITHDRAW")
+    .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+  const donateTxCount = campaignTransactions.filter((tx) => tx.txType === "DONATE").length;
+  const blockchainExpired = campaign.expired || status.key === "failed";
   const actionNote = {
     goalReached: "Chiến dịch đã đạt mục tiêu. Chủ chiến dịch có thể rút tiền.",
     failed: "Chiến dịch đã hết hạn và không đạt mục tiêu. Donor có thể hoàn tiền.",
@@ -163,15 +174,22 @@ export default function CampaignDetail({ contractHooks, account }) {
                 </button>
               </div>
 
+              <div className={`alert ${status.key === "failed" || status.key === "paused" ? "alert-warning" : status.key === "completed" || status.key === "goalReached" ? "alert-success" : "alert-info"}`} style={{ marginBottom: 18 }}>
+                <span>i</span>
+                <span>
+                  {actionNote || `Chiến dịch đang nhận quyên góp. Còn ${timeLeft.text} để đạt mục tiêu ${formatEth(campaign.goal)} ETH.`}
+                </span>
+              </div>
+
               {/* Tabs */}
               <div className="detail-tabs">
-                {["info", "donations", "blockchain"].map((tab) => (
+                {["info", "donations", "transparency", "blockchain"].map((tab) => (
                   <button
                     key={tab}
                     className={`detail-tab ${activeTab === tab ? "active" : ""}`}
                     onClick={() => setActiveTab(tab)}
                   >
-                    {{ info: "📄 Thông tin", donations: `💰 Quyên góp (${donations.length})`, blockchain: "⛓️ Blockchain" }[tab]}
+                    {{ info: "📄 Thông tin", donations: `💰 Quyên góp (${donations.length})`, transparency: "Minh bạch", blockchain: "⛓️ Blockchain" }[tab]}
                   </button>
                 ))}
               </div>
@@ -212,6 +230,64 @@ export default function CampaignDetail({ contractHooks, account }) {
                       ))}
                     </div>
                   )}
+                </div>
+              )}
+
+              {activeTab === "transparency" && (
+                <div className="transparency-panel">
+                  <div className="transparency-grid">
+                    <div className="transparency-metric">
+                      <span>Đã nhận</span>
+                      <strong>{formatEth(campaign.raised)} ETH</strong>
+                    </div>
+                    <div className="transparency-metric">
+                      <span>Mục tiêu</span>
+                      <strong>{formatEth(campaign.goal)} ETH</strong>
+                    </div>
+                    <div className="transparency-metric">
+                      <span>Phí nền tảng dự kiến</span>
+                      <strong>{formatEth(platformFeeAmount)} ETH</strong>
+                    </div>
+                    <div className="transparency-metric">
+                      <span>Chủ chiến dịch nhận</span>
+                      <strong>{formatEth(ownerReceives)} ETH</strong>
+                    </div>
+                    <div className="transparency-metric">
+                      <span>Đã hoàn tiền</span>
+                      <strong>{formatEth(totalRefunded)} ETH</strong>
+                    </div>
+                    <div className="transparency-metric">
+                      <span>Đã rút</span>
+                      <strong>{formatEth(totalWithdrawn)} ETH</strong>
+                    </div>
+                  </div>
+
+                  <div className="audit-list">
+                    <div className="audit-row">
+                      <span>Giao dịch quyên góp</span>
+                      <strong>{donateTxCount}</strong>
+                    </div>
+                    <div className="audit-row">
+                      <span>Trạng thái giải ngân</span>
+                      <strong>{campaign.withdrawn ? "Đã rút tiền" : "Chưa rút tiền"}</strong>
+                    </div>
+                    <div className="audit-row">
+                      <span>Hoàn tiền của ví hiện tại</span>
+                      <strong>{formatEth(refundableAmount)} ETH</strong>
+                    </div>
+                    <div className="audit-row">
+                      <span>Contract</span>
+                      <button className="address" onClick={() => { copyToClipboard(contractHooks.getContractAddress()); toast.success("Đã sao chép!"); }}>
+                        {formatAddress(contractHooks.getContractAddress())}
+                      </button>
+                    </div>
+                  </div>
+
+                  <TransactionHistory
+                    transactions={campaignTransactions}
+                    loading={false}
+                    title="Dòng kiểm toán on-chain"
+                  />
                 </div>
               )}
 
@@ -356,7 +432,7 @@ export default function CampaignDetail({ contractHooks, account }) {
                 </>
               )}
 
-              {isOwner && parseFloat(campaign.raised) > 0 && !campaign.withdrawn && !goalReached && !timeLeft.expired && (
+              {isOwner && parseFloat(campaign.raised) > 0 && !campaign.withdrawn && !goalReached && !blockchainExpired && (
                 <>
                   <hr className="divider" />
                   <div className="alert alert-warning">
@@ -366,7 +442,7 @@ export default function CampaignDetail({ contractHooks, account }) {
                 </>
               )}
 
-              {account && status.canRefund && hasRefund && (
+              {account && !goalReached && !campaign.withdrawn && hasRefund && (
                 <>
                   <hr className="divider" />
                   <div className="alert alert-warning" style={{ marginBottom: 12 }}>

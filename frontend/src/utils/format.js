@@ -51,9 +51,9 @@ export function getTimeRemaining(deadline) {
 }
 
 export function getCampaignStatus(campaign) {
-  const now = Math.floor(Date.now() / 1000);
+  const now = Number(campaign.chainNow || Math.floor(Date.now() / 1000));
   const goalReached = BigInt(campaign.raisedWei || 0) >= BigInt(campaign.goalWei || 0);
-  const expired = Number(campaign.deadline) < now;
+  const expired = typeof campaign.expired === "boolean" ? campaign.expired : Number(campaign.deadline) < now;
 
   if (campaign.withdrawn) {
     return {

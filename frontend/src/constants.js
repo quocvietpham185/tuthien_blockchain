@@ -1,7 +1,12 @@
 // Blockchain configuration
-export const HARDHAT_CHAIN_ID = 31337;
-export const HARDHAT_RPC_URL = "http://127.0.0.1:8545";
-export const BACKEND_URL = "http://localhost:5000";
+const DEFAULT_CHAIN_ID = 31337;
+const DEFAULT_RPC_URL = "http://127.0.0.1:8545";
+const DEFAULT_NETWORK_NAME = "Hardhat Local";
+
+export const HARDHAT_CHAIN_ID = Number(import.meta.env.VITE_CHAIN_ID || DEFAULT_CHAIN_ID);
+export const HARDHAT_RPC_URL = import.meta.env.VITE_RPC_URL || DEFAULT_RPC_URL;
+export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+export const NETWORK_NAME = import.meta.env.VITE_NETWORK_NAME || DEFAULT_NETWORK_NAME;
 
 // Campaign categories
 export const CATEGORIES = [
@@ -23,11 +28,11 @@ export const TEST_PRIVATE_KEYS = [
 
 // Hardhat network config for MetaMask
 export const HARDHAT_NETWORK = {
-  chainId: "0x7a69",
-  chainName: "Hardhat Local",
+  chainId: `0x${HARDHAT_CHAIN_ID.toString(16)}`,
+  chainName: NETWORK_NAME,
   nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-  rpcUrls: ["http://127.0.0.1:8545"],
-  blockExplorerUrls: null,
+  rpcUrls: [HARDHAT_RPC_URL],
+  blockExplorerUrls: HARDHAT_CHAIN_ID === 11155111 ? ["https://sepolia.etherscan.io"] : null,
 };
 
 // Transaction type labels

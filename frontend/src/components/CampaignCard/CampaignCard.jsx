@@ -17,6 +17,12 @@ export default function CampaignCard({ campaign, onDonate }) {
   const timeLeft = getTimeRemaining(campaign.deadline);
   const categoryClass = getCategoryClass(campaign.category);
   const imageUrl = getCampaignImageUrl(campaign);
+  const statusHint = {
+    goalReached: "Đã đạt mục tiêu, chờ chủ chiến dịch rút tiền.",
+    failed: "Đã hết hạn, donor có thể nhận hoàn tiền.",
+    paused: "Đang tạm dừng nhận quyên góp.",
+    completed: "Đã giải ngân thành công.",
+  }[status.key];
 
   const handleDonate = (event) => {
     event.stopPropagation();
@@ -75,6 +81,12 @@ export default function CampaignCard({ campaign, onDonate }) {
             </span>
           </div>
         </div>
+
+        {statusHint && (
+          <div className={`campaign-status-note campaign-status-${status.key}`}>
+            {statusHint}
+          </div>
+        )}
 
         <div className="campaign-owner">
           <span className="owner-label">Người tạo:</span>

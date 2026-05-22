@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { ethers } from "ethers";
 import toast from "react-hot-toast";
-import { BACKEND_URL, HARDHAT_CHAIN_ID, HARDHAT_NETWORK } from "../constants";
+import { BACKEND_URL, HARDHAT_CHAIN_ID, HARDHAT_NETWORK, NETWORK_NAME } from "../constants";
 
 export function useWallet() {
   const [account, setAccount] = useState(null);
@@ -46,7 +46,7 @@ export function useWallet() {
     return typeof window !== "undefined" && typeof window.ethereum !== "undefined";
   };
 
-  // Switch to Hardhat network
+  // Switch to configured network
   const switchToHardhat = async () => {
     if (!window.ethereum) return;
     try {
@@ -63,7 +63,7 @@ export function useWallet() {
             params: [HARDHAT_NETWORK],
           });
         } catch (addError) {
-          toast.error("Không thể thêm mạng Hardhat vào MetaMask");
+          toast.error(`Không thể thêm mạng ${NETWORK_NAME} vào MetaMask`);
         }
       }
     }
@@ -119,7 +119,7 @@ export function useWallet() {
       await authenticateWithBackend(accounts[0], web3Signer);
 
       if (!correct) {
-        toast("⚠️ Vui lòng chuyển sang mạng Hardhat Local (Chain ID: 31337)", {
+        toast(`⚠️ Vui lòng chuyển sang mạng ${NETWORK_NAME} (Chain ID: ${HARDHAT_CHAIN_ID})`, {
           icon: "⚠️",
           duration: 5000,
         });
