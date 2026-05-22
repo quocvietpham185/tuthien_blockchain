@@ -14,7 +14,7 @@ import "./CampaignCard.css";
 export default function CampaignCard({ campaign, onDonate }) {
   const navigate = useNavigate();
   const status = getCampaignStatus(campaign);
-  const timeLeft = getTimeRemaining(campaign.deadline);
+  const timeLeft = getTimeRemaining(campaign.deadline, campaign.chainNow);
   const categoryClass = getCategoryClass(campaign.category);
   const imageUrl = getCampaignImageUrl(campaign);
   const statusHint = {

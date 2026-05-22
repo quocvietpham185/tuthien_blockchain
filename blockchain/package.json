@@ -12,6 +12,7 @@
     "seed:sepolia": "hardhat run scripts/seed.js --network sepolia",
     "demo:refund": "hardhat run scripts/demo-refund.js --network localhost",
     "demo:refund-two": "hardhat run scripts/demo-refund-two.js --network localhost",
+    "demo:refund-three": "hardhat run scripts/demo-refund-three.js --network localhost",
     "clean": "hardhat clean"
   },
   "devDependencies": {

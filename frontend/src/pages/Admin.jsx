@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import { BACKEND_URL } from "../constants";
 import { formatAddress, formatEth, formatDateTime, copyToClipboard, getCampaignStatus } from "../utils/format";
 import toast from "react-hot-toast";
@@ -20,15 +20,17 @@ export default function Admin({ contractHooks, account, authToken }) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [platformOwner, allCampaigns, currentFee] = await Promise.all([
+      const [platformOwner, allCampaigns, currentFee, allTransactions] = await Promise.all([
         contractHooks.getPlatformOwner(),
         contractHooks.getCampaigns(),
         contractHooks.getPlatformFee(),
+        contractHooks.getAllTransactions(),
       ]);
       setOwner(platformOwner);
       setCampaigns([...allCampaigns].reverse());
       setPlatformFeeValue(currentFee);
       setFeeInput(currentFee);
+      setOverview(buildAdminOverview(allCampaigns, allTransactions));
 
       if (authToken) {
         const response = await fetch(`${BACKEND_URL}/api/admin/overview`, {
@@ -160,7 +162,7 @@ export default function Admin({ contractHooks, account, authToken }) {
                         <div>
                           <strong>#{campaign.id} {campaign.title}</strong>
                           <p>
-                            {formatAddress(campaign.owner)} � {formatEth(campaign.raised)}/{formatEth(campaign.goal)} ETH
+                            {formatAddress(campaign.owner)} · {formatEth(campaign.raised)}/{formatEth(campaign.goal)} ETH
                           </p>
                         </div>
                         <div className="admin-row-actions">
@@ -208,24 +210,38 @@ export default function Admin({ contractHooks, account, authToken }) {
                   Top chien dich
                 </h2>
                 <div className="admin-list">
-                  {(stats?.topCampaigns || []).map((campaign) => (
-                    <div key={campaign.id} className="admin-mini-row">
-                      <span>#{campaign.id} {campaign.title}</span>
-                      <strong>{formatEth(campaign.raised)} ETH</strong>
+                  {(stats?.topCampaigns || []).length === 0 ? (
+                    <div className="admin-mini-row">
+                      <span>Chua co chien dich</span>
+                      <strong>0 ETH</strong>
                     </div>
-                  ))}
+                  ) : (
+                    (stats?.topCampaigns || []).map((campaign) => (
+                      <div key={campaign.id} className="admin-mini-row">
+                        <span>#{campaign.id} {campaign.title}</span>
+                        <strong>{formatEth(campaign.raised)} ETH</strong>
+                      </div>
+                    ))
+                  )}
                 </div>
 
                 <h2 className="section-title" style={{ fontSize: 18, margin: "28px 0 16px" }}>
                   Giao dich gan day
                 </h2>
                 <div className="admin-list">
-                  {(overview?.recentTransactions || []).map((tx, index) => (
-                    <div key={index} className="admin-mini-row">
-                      <span>{tx.txType} #{tx.campaignId}</span>
-                      <small>{formatDateTime(tx.timestamp)}</small>
+                  {(overview?.recentTransactions || []).length === 0 ? (
+                    <div className="admin-mini-row">
+                      <span>Chua co giao dich</span>
+                      <small>On-chain</small>
                     </div>
-                  ))}
+                  ) : (
+                    (overview?.recentTransactions || []).map((tx, index) => (
+                      <div key={index} className="admin-mini-row">
+                        <span>{tx.txType} #{tx.campaignId}</span>
+                        <small>{formatDateTime(tx.timestamp)}</small>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
@@ -236,3 +252,25 @@ export default function Admin({ contractHooks, account, authToken }) {
   );
 }
 
+
+function buildAdminOverview(campaigns, transactions) {
+  const donateTxs = transactions.filter((tx) => tx.txType === "DONATE");
+  const uniqueDonors = new Set(donateTxs.map((tx) => tx.actor.toLowerCase()));
+  const totalRaised = campaigns.reduce((sum, campaign) => sum + Number(campaign.raised || 0), 0);
+  const totalGoal = campaigns.reduce((sum, campaign) => sum + Number(campaign.goal || 0), 0);
+
+  return {
+    stats: {
+      totalCampaigns: campaigns.length.toString(),
+      uniqueDonors: uniqueDonors.size.toString(),
+      fundingRate: totalGoal > 0 ? Math.round((totalRaised * 100) / totalGoal) : 0,
+      transactionCount: transactions.length.toString(),
+      topCampaigns: [...campaigns]
+        .sort((a, b) => Number(b.raised || 0) - Number(a.raised || 0))
+        .slice(0, 5),
+    },
+    recentTransactions: [...transactions]
+      .sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0))
+      .slice(0, 8),
+  };
+}

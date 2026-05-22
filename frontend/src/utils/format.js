@@ -36,8 +36,8 @@ export function formatDateTime(timestamp) {
   });
 }
 
-export function getTimeRemaining(deadline) {
-  const now = Math.floor(Date.now() / 1000);
+export function getTimeRemaining(deadline, currentTimestamp = Math.floor(Date.now() / 1000)) {
+  const now = Number(currentTimestamp);
   const diff = Number(deadline) - now;
 
   if (diff <= 0) return { text: "Đã hết hạn", expired: true };

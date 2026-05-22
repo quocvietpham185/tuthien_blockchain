@@ -96,7 +96,7 @@ export default function CampaignDetail({ contractHooks, account }) {
   if (!campaign) return null;
 
   const status = getCampaignStatus(campaign);
-  const timeLeft = getTimeRemaining(campaign.deadline);
+  const timeLeft = getTimeRemaining(campaign.deadline, campaign.chainNow);
   const isOwner = account?.toLowerCase() === campaign.owner.toLowerCase();
   const imageUrl = getCampaignImageUrl(campaign);
   const goalReached = BigInt(campaign.raisedWei) >= BigInt(campaign.goalWei);
@@ -111,6 +111,18 @@ export default function CampaignDetail({ contractHooks, account }) {
     .filter((tx) => tx.txType === "WITHDRAW")
     .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
   const donateTxCount = campaignTransactions.filter((tx) => tx.txType === "DONATE").length;
+  const currentWalletDonationAmount = account
+    ? donations
+        .filter((tx) => tx.actor?.toLowerCase() === account.toLowerCase())
+        .reduce((sum, tx) => sum + Number(tx.amount || 0), 0)
+    : 0;
+  const canRefundCurrentWallet =
+    Boolean(account) &&
+    status.canRefund &&
+    !goalReached &&
+    !campaign.withdrawn &&
+    hasRefund &&
+    currentWalletDonationAmount > 0;
   const blockchainExpired = campaign.expired || status.key === "failed";
   const actionNote = {
     goalReached: "Chiến dịch đã đạt mục tiêu. Chủ chiến dịch có thể rút tiền.",
@@ -272,6 +284,10 @@ export default function CampaignDetail({ contractHooks, account }) {
                       <strong>{campaign.withdrawn ? "Đã rút tiền" : "Chưa rút tiền"}</strong>
                     </div>
                     <div className="audit-row">
+                      <span>Ví hiện tại đã ủng hộ</span>
+                      <strong>{formatEth(currentWalletDonationAmount)} ETH</strong>
+                    </div>
+                    <div className="audit-row">
                       <span>Hoàn tiền của ví hiện tại</span>
                       <strong>{formatEth(refundableAmount)} ETH</strong>
                     </div>
@@ -378,6 +394,10 @@ export default function CampaignDetail({ contractHooks, account }) {
                   <span className="sidebar-stat-value">{formatDate(campaign.deadline)}</span>
                 </div>
                 <div className="sidebar-stat">
+                  <span className="sidebar-stat-label">⛓️ Thời gian blockchain</span>
+                  <span className="sidebar-stat-value">{formatDateTime(campaign.chainNow)}</span>
+                </div>
+                <div className="sidebar-stat">
                   <span className="sidebar-stat-label">📊 Trạng thái</span>
                   <span className={`badge badge-${status.color}`}>{status.label}</span>
                 </div>
@@ -442,12 +462,12 @@ export default function CampaignDetail({ contractHooks, account }) {
                 </>
               )}
 
-              {account && !goalReached && !campaign.withdrawn && hasRefund && (
+              {canRefundCurrentWallet && (
                 <>
                   <hr className="divider" />
                   <div className="alert alert-warning" style={{ marginBottom: 12 }}>
                     <span>↩</span>
-                    <span>Chiến dịch không đạt mục tiêu. Bạn có thể nhận lại {formatEth(refundableAmount)} ETH.</span>
+                    <span>Chiến dịch không đạt mục tiêu. Ví này đã ủng hộ {formatEth(currentWalletDonationAmount)} ETH và có thể nhận lại {formatEth(refundableAmount)} ETH.</span>
                   </div>
                   <button
                     className="btn btn-secondary btn-full"
@@ -456,6 +476,16 @@ export default function CampaignDetail({ contractHooks, account }) {
                   >
                     {refunding ? <><span className="spinner" /> Đang hoàn tiền...</> : "Nhận Hoàn Tiền"}
                   </button>
+                </>
+              )}
+
+              {account && status.canRefund && !canRefundCurrentWallet && !campaign.withdrawn && (
+                <>
+                  <hr className="divider" />
+                  <div className="alert alert-info">
+                    <span>i</span>
+                    <span>Ví hiện tại đã ủng hộ {formatEth(currentWalletDonationAmount)} ETH trong chiến dịch này và không có khoản hoàn tiền khả dụng.</span>
+                  </div>
                 </>
               )}
 

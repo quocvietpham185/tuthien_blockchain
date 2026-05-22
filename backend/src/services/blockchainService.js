@@ -6,6 +6,8 @@ const notificationService = require("./notificationService");
 let provider = null;
 let contract = null;
 let contractConfig = null;
+let eventPollTimer = null;
+let lastProcessedBlock = 0;
 
 /**
  * Load contract config (ABI + address)
@@ -43,7 +45,7 @@ async function initialize() {
   contract = new ethers.Contract(contractAddress, contractConfig.abi, provider);
 
   // Start event listeners
-  setupEventListeners();
+  await setupEventListeners();
 
   return { network, contractAddress };
 }
@@ -53,6 +55,26 @@ async function initialize() {
  */
 function setupEventListeners() {
   if (!contract) return;
+
+  if (eventPollTimer) {
+    clearInterval(eventPollTimer);
+    eventPollTimer = null;
+  }
+
+  provider.getBlockNumber()
+    .then((blockNumber) => {
+      lastProcessedBlock = blockNumber;
+      eventPollTimer = setInterval(() => {
+        pollContractEvents().catch((error) => {
+          console.warn("[EVENT] Poll failed:", error.message);
+        });
+      }, 5000);
+    })
+    .catch((error) => {
+      console.warn("[EVENT] Listener setup failed:", error.message);
+    });
+
+  return;
 
   contract.on("CampaignCreated", (id, owner, title, category, goal, deadline, ipfsHash, timestamp, event) => {
     console.log(`📢 [EVENT] CampaignCreated: #${id} "${title}" by ${owner.slice(0, 8)}...`);
@@ -109,6 +131,91 @@ function setupEventListeners() {
       txHash: event?.log?.transactionHash || event?.transactionHash,
     });
   });
+}
+
+async function pollContractEvents() {
+  if (!contract || !provider) return;
+
+  const currentBlock = await provider.getBlockNumber();
+  if (currentBlock <= lastProcessedBlock) return;
+
+  const fromBlock = lastProcessedBlock + 1;
+  const toBlock = currentBlock;
+  const [createdEvents, donationEvents, withdrawEvents, refundEvents] = await Promise.all([
+    contract.queryFilter(contract.filters.CampaignCreated(), fromBlock, toBlock),
+    contract.queryFilter(contract.filters.DonationReceived(), fromBlock, toBlock),
+    contract.queryFilter(contract.filters.FundsWithdrawn(), fromBlock, toBlock),
+    contract.queryFilter(contract.filters.DonationRefunded(), fromBlock, toBlock),
+  ]);
+
+  [...createdEvents, ...donationEvents, ...withdrawEvents, ...refundEvents]
+    .sort((a, b) => a.blockNumber - b.blockNumber || a.index - b.index)
+    .forEach(handleContractEvent);
+
+  lastProcessedBlock = currentBlock;
+}
+
+function handleContractEvent(event) {
+  const eventName = event.fragment?.name;
+
+  if (eventName === "CampaignCreated") {
+    const [id, owner, title, category, goal, deadline] = event.args;
+    console.log(`[EVENT] CampaignCreated: #${id} "${title}" by ${owner.slice(0, 8)}...`);
+    notificationService.addNotification("CAMPAIGN_CREATED", {
+      campaignId: id.toString(),
+      owner,
+      actor: owner,
+      title,
+      category,
+      goal: ethers.formatEther(goal),
+      deadline: deadline.toString(),
+      txHash: event.transactionHash,
+    });
+    return;
+  }
+
+  if (eventName === "DonationReceived") {
+    const [campaignId, donor, amount, message, , totalRaised] = event.args;
+    console.log(
+      `[EVENT] DonationReceived: ${ethers.formatEther(amount)} ETH to Campaign #${campaignId} from ${donor.slice(0, 8)}...`
+    );
+    notificationService.addNotification("DONATION_RECEIVED", {
+      campaignId: campaignId.toString(),
+      donor,
+      actor: donor,
+      amount: ethers.formatEther(amount),
+      message,
+      totalRaised: ethers.formatEther(totalRaised),
+      txHash: event.transactionHash,
+    });
+    return;
+  }
+
+  if (eventName === "FundsWithdrawn") {
+    const [campaignId, owner, amount, platformFeeAmount] = event.args;
+    console.log(`[EVENT] FundsWithdrawn: ${ethers.formatEther(amount)} ETH from Campaign #${campaignId}`);
+    notificationService.addNotification("FUNDS_WITHDRAWN", {
+      campaignId: campaignId.toString(),
+      owner,
+      actor: owner,
+      amount: ethers.formatEther(amount),
+      platformFeeAmount: ethers.formatEther(platformFeeAmount),
+      txHash: event.transactionHash,
+    });
+    return;
+  }
+
+  if (eventName === "DonationRefunded") {
+    const [campaignId, donor, amount] = event.args;
+    console.log(`[EVENT] DonationRefunded: ${ethers.formatEther(amount)} ETH from Campaign #${campaignId}`);
+    notificationService.addNotification("DONATION_REFUNDED", {
+      campaignId: campaignId.toString(),
+      donor,
+      actor: donor,
+      amount: ethers.formatEther(amount),
+      txHash: event.transactionHash,
+    });
+  }
 }
 
 /**
